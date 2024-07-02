@@ -26,3 +26,9 @@ variable "endpoint_config_types" {
   type        = list(string)
   default     = ["REGIONAL"]
 }
+
+variable "rest_vpc_link_arn" {
+  description = "VPC Link ARN for the REST API (Load Balancer)"
+  type        = string
+  default     = ""
+}
