@@ -16,3 +16,11 @@ output "apigw_domains" {
     }
   }
 }
+
+output "apigw_account" {
+  value = {
+    cloudwatch_role_arn = aws_api_gateway_account.this.cloudwatch_role_arn
+    burst_limit = aws_api_gateway_account.this.throttle_settings.burst_limit
+    rate_limit  = aws_api_gateway_account.this.throttle_settings.rate_limit
+  }
+}
