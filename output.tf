@@ -24,3 +24,7 @@ output "apigw_account" {
     rate_limit          = aws_api_gateway_account.this.throttle_settings[0].rate_limit
   }
 }
+
+output "apigw_role_arn" {
+  value = aws_iam_role.cloudwatch.arn
+}
