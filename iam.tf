@@ -20,6 +20,7 @@ data "aws_iam_policy_document" "assume_role" {
 resource "aws_iam_role" "cloudwatch" {
   name               = "apigw-logging-${local.system_name}"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
+  tags               = local.all_tags
 }
 
 data "aws_iam_policy_document" "cloudwatch" {
