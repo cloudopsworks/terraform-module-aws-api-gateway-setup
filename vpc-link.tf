@@ -9,4 +9,7 @@ resource "aws_api_gateway_vpc_link" "vpc_link" {
   name        = var.name_prefix != "" ? "vpc-link-${var.name_prefix}-${local.system_name}" : "vpc-link-${local.system_name}"
   description = "VPC Link for API Gateway - ${local.system_name}"
   target_arns = [var.rest_vpc_link_arn]
+  tags = merge({
+    Name = var.name_prefix != "" ? "vpc-link-${var.name_prefix}-${local.system_name}" : "vpc-link-${local.system_name}"
+  }, local.all_tags)
 }

@@ -4,6 +4,13 @@
 #            Distributed Under Apache v2.0 License
 #
 
+variable "name_prefix" {
+  description = "Prefix for the name of the resources"
+  type        = string
+  default     = ""
+
+}
+
 variable "apigw_domains" {
   description = "List of API Gateway Domain Names to create"
   type        = list(string)

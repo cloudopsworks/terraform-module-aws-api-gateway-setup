@@ -16,7 +16,10 @@ resource "aws_api_gateway_domain_name" "this" {
 
   security_policy = "TLS_1_2"
 
-  tags = local.all_tags
+  tags = merge({
+    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value, local.system_name) : format("apigw-%s-%s", each.value, local.system_name)
+    },
+  local.all_tags)
 }
 
 resource "aws_api_gateway_account" "this" {
