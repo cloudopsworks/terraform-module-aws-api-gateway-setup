@@ -5,7 +5,7 @@
 #
 
 resource "aws_api_gateway_domain_name" "this" {
-  for_each    = var.apigw_domains
+  for_each    = toset(var.apigw_domains)
   domain_name = format("%s.%s", each.value, var.domain_zone)
 
   regional_certificate_arn = var.acm_certificate_arn
