@@ -18,13 +18,13 @@ output "apigw_domains" {
 }
 
 output "apigw_account" {
-  value = {
-    cloudwatch_role_arn = aws_api_gateway_account.this.cloudwatch_role_arn
-    burst_limit         = aws_api_gateway_account.this.throttle_settings[0].burst_limit
-    rate_limit          = aws_api_gateway_account.this.throttle_settings[0].rate_limit
-  }
+  value = var.cloudwatch_role_enabled ? {
+    cloudwatch_role_arn = aws_api_gateway_account.this[0].cloudwatch_role_arn
+    burst_limit         = aws_api_gateway_account.this[0].throttle_settings[0].burst_limit
+    rate_limit          = aws_api_gateway_account.this[0].throttle_settings[0].rate_limit
+  } : {}
 }
 
 output "apigw_role_arn" {
-  value = aws_iam_role.cloudwatch.arn
+  value = try(aws_iam_role.cloudwatch[0].arn, null)
 }

@@ -39,3 +39,9 @@ variable "rest_vpc_link_arn" {
   type        = string
   default     = ""
 }
+
+variable "cloudwatch_role_enabled" {
+  description = "Enable CloudWatch Role for API Gateway Account"
+  type        = bool
+  default     = true
+}

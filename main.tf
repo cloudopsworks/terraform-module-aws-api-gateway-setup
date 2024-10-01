@@ -23,5 +23,6 @@ resource "aws_api_gateway_domain_name" "this" {
 }
 
 resource "aws_api_gateway_account" "this" {
-  cloudwatch_role_arn = aws_iam_role.cloudwatch.arn
+  count               = var.cloudwatch_role_enabled ? 1 : 0
+  cloudwatch_role_arn = aws_iam_role.cloudwatch[count.index].arn
 }

@@ -5,6 +5,7 @@
 #
 
 data "aws_iam_policy_document" "assume_role" {
+  count = var.cloudwatch_role_enabled ? 1 : 0
   statement {
     effect = "Allow"
 
@@ -18,12 +19,14 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "cloudwatch" {
+  count              = var.cloudwatch_role_enabled ? 1 : 0
   name               = "apigw-logging-${local.system_name}"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.assume_role[count.index].json
   tags               = local.all_tags
 }
 
 data "aws_iam_policy_document" "cloudwatch" {
+  count = var.cloudwatch_role_enabled ? 1 : 0
   statement {
     effect = "Allow"
 
@@ -42,7 +45,8 @@ data "aws_iam_policy_document" "cloudwatch" {
 }
 
 resource "aws_iam_role_policy" "cloudwatch" {
+  count  = var.cloudwatch_role_enabled ? 1 : 0
   name   = "CloudwatchLogging"
-  role   = aws_iam_role.cloudwatch.id
-  policy = data.aws_iam_policy_document.cloudwatch.json
+  role   = aws_iam_role.cloudwatch[count.index].id
+  policy = data.aws_iam_policy_document.cloudwatch[count.index].json
 }
