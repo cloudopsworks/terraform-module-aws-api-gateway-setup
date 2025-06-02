@@ -42,6 +42,22 @@ data "aws_iam_policy_document" "cloudwatch" {
 
     resources = ["*"]
   }
+  statement {
+    actions = [
+      "logs:CreateLogDelivery",
+      "logs:PutResourcePolicy",
+      "logs:UpdateLogDelivery",
+      "logs:DeleteLogDelivery",
+      "logs:CreateLogGroup",
+      "logs:DescribeResourcePolicies",
+      "logs:GetLogDelivery",
+      "logs:ListLogDeliveries"
+    ]
+
+    resources = [
+      "*"
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "cloudwatch" {
