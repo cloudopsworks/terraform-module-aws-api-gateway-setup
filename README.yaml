@@ -8,23 +8,96 @@ copyrights:
     url: "https://cloudops.works"
     year: "2024"
 
-github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+github_repo: cloudopsworks/terraform-module-aws-api-gateway-setup
 
 description: |-
-  VPC Module for setting up API Gateway with basic settings.
+  Module for setting up API Gateway with basic settings.
 
 # Introduction to the project
-#introduction: |-
-#  This is an introduction.
+introduction: |-
+  This Terraform module provides a streamlined setup for AWS API Gateway with essential configurations. It supports:
+  - Custom domain names with TLS 1.2 security
+  - CloudWatch logging integration
+  - VPC Link setup for private integrations
+  - Regional endpoint configuration
+  - Automated IAM role and policy management
 
 # How to use this project
-#usage: |-
+usage: |-
+  To use this module, include it in your Terraform configuration with the required variables:
+
+  ```hcl
+  module "api_gateway" {
+    source = "cloudopsworks/api-gateway-setup/aws"
+  
+    name_prefix           = "myapi"
+    system_name          = "production"
+    domain_zone         = "example.com"
+    apigw_domains       = ["api", "dev-api"]
+    acm_certificate_arn = "arn:aws:acm:region:account:certificate/xxx"
+  
+    cloudwatch_role_enabled = true
+    endpoint_config_types   = ["REGIONAL"]
+  }
+  ```
 
 # Example usage
-#examples: |-
+examples: |-
+  Terragrunt implementation example:
+
+  ```hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+
+  terraform {
+    source = "cloudopsworks/api-gateway-setup/aws"
+  }
+
+  inputs = {
+    name_prefix           = "customer"
+    system_name          = "staging"
+    domain_zone         = "api.example.com"
+    apigw_domains       = ["v1", "v2"]
+    acm_certificate_arn = dependency.acm.outputs.certificate_arn
+  
+    cloudwatch_role_enabled = true
+    endpoint_config_types   = ["REGIONAL"]
+  
+    rest_vpc_link_arn    = dependency.nlb.outputs.lb_arn
+  
+    tags = {
+      Environment = "staging"
+      Project     = "customer-api"
+    }
+  }
+  ```
 
 # How to get started quickly
-#quickstart: |-
+quickstart: |-
+  1. Add the module to your Terraform configuration:
+     ```hcl
+     module "api_gateway" {
+       source = "cloudopsworks/api-gateway-setup/aws"
+       version = "1.0.0"
+     }
+     ```
+  
+  2. Configure required variables:
+     - name_prefix: Prefix for resource names
+     - system_name: System identifier
+     - domain_zone: Base domain for API endpoints
+     - apigw_domains: List of subdomains
+     - acm_certificate_arn: SSL certificate ARN
+  
+  3. Initialize and apply:
+     ```bash
+     terraform init
+     terraform plan
+     terraform apply
+     ```
+  
+  4. Access your API endpoints using the generated domain names
 
 include:
   - "docs/targets.md"
