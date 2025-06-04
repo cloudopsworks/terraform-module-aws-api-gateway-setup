@@ -40,6 +40,19 @@ variable "rest_vpc_link_arn" {
   default     = ""
 }
 
+##
+# Variable for HTTP API Gateway VPC Link
+# This variable is used to define the VPC Link for HTTP API Gateway.
+# http_vpc_link:
+#   security_group_ids: List of security group IDs to associate with the VPC Link.
+#   subnet_ids: List of subnet IDs to associate with the VPC Link.
+#   vpc_id: The VPC ID where the VPC Link will be created.
+variable "http_vpc_link" {
+  description = "VPC Link for HTTP API Gateway"
+  type        = any
+  default     = {}
+}
+
 variable "cloudwatch_role_enabled" {
   description = "Enable CloudWatch Role for API Gateway Account"
   type        = bool
