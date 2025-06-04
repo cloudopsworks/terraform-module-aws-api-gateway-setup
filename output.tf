@@ -28,3 +28,19 @@ output "apigw_account" {
 output "apigw_role_arn" {
   value = try(aws_iam_role.cloudwatch[0].arn, null)
 }
+
+output "apigw_rest_vpc_link_name" {
+  value = var.rest_vpc_link_arn != "" ? aws_api_gateway_vpc_link.vpc_link[0].name : null
+}
+
+output "apigw_rest_vpc_link_id" {
+  value = var.rest_vpc_link_arn != "" ? aws_api_gateway_vpc_link.vpc_link[0].id : null
+}
+
+output "apigw_http_vpc_link_name" {
+  value = length(var.http_vpc_link) > 0 ? aws_apigatewayv2_vpc_link.vpc_link[0].name : null
+}
+
+output "apigw_http_vpc_link_id" {
+  value = length(var.http_vpc_link) > 0 ? aws_apigatewayv2_vpc_link.vpc_link[0].id : null
+}
