@@ -13,7 +13,7 @@
 # Terraform API Gateway Basic setup
 
 
-Module for setting up API Gateway with basic settings.
+Comprehensive AWS API Gateway module supporting both REST and HTTP APIs with advanced features including custom domains, VPC links, mutual TLS authentication, and CloudWatch integration. This module provides complete infrastructure setup for API Gateway v1 and v2 with regional and edge-optimized endpoints.
 
 
 ---
@@ -48,12 +48,17 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 
 ## Introduction
 
-This Terraform module provides a streamlined setup for AWS API Gateway with essential configurations. It supports:
-- Custom domain names with TLS 1.2 security
-- CloudWatch logging integration
-- VPC Link setup for private integrations
-- Regional endpoint configuration
+This Terraform module provides a comprehensive setup for AWS API Gateway with advanced configurations. It supports:
+- Multiple API Gateway versions (v1 REST and v2 HTTP APIs)
+- Custom domain names with configurable security policies (TLS 1.2)
+- Mutual TLS authentication for enhanced security
+- CloudWatch logging with automated role configuration
+- VPC Link setup for private integrations (both REST and HTTP API)
+- Regional and Edge-optimized endpoint configurations
 - Automated IAM role and policy management
+- Multiple domain configurations with certificate management
+- IP address type configuration for APIs
+- Flexible tagging system
 
 ## Usage
 
@@ -70,12 +75,34 @@ module "api_gateway" {
 
   name_prefix           = "myapi"
   system_name          = "production"
-  domain_zone         = "example.com"
-  apigw_domains       = ["api", "dev-api"]
-  acm_certificate_arn = "arn:aws:acm:region:account:certificate/xxx"
-
+  domain_zone          = "example.com"
+  apigw_domains        = [
+    {
+      domain_name         = "api"
+      version            = 1
+      endpoint_type      = "REGIONAL"
+      security_policy    = "TLS_1_2"
+      acm_certificate_arn = null
+      ip_address_type    = "IPV4"
+      mutual_tls         = {}
+    },
+    {
+      domain_name         = "dev-api"
+      version            = 2
+      endpoint_type      = "REGIONAL"
+      security_policy    = "TLS_1_2"
+      acm_certificate_arn = null
+      ip_address_type    = "IPV4"
+      mutual_tls         = {
+        truststore_uri     = "s3://bucket-name/key"
+        truststore_version = "1.0"
+      }
+    }
+  ]
+  acm_certificate_arn    = "arn:aws:acm:region:account:certificate/xxx"
   cloudwatch_role_enabled = true
   endpoint_config_types   = ["REGIONAL"]
+  rest_vpc_link_arn      = "arn:aws:elasticloadbalancing:region:account:loadbalancer/net/name/id"
 }
 ```
 
@@ -84,32 +111,61 @@ module "api_gateway" {
 1. Add the module to your Terraform configuration:
    ```hcl
    module "api_gateway" {
-     source = "cloudopsworks/api-gateway-setup/aws"
+     source  = "cloudopsworks/api-gateway-setup/aws"
      version = "1.0.0"
    }
    ```
 
 2. Configure required variables:
-   - name_prefix: Prefix for resource names
-   - system_name: System identifier
-   - domain_zone: Base domain for API endpoints
-   - apigw_domains: List of subdomains
-   - acm_certificate_arn: SSL certificate ARN
+   - name_prefix: Prefix for resource names (e.g., "myapi")
+   - system_name: System identifier (e.g., "production")
+   - domain_zone: Base domain for API endpoints (e.g., "api.example.com")
+   - apigw_domains: List of domain configurations with:
+     - domain_name: Subdomain name
+     - version: API Gateway version (1 for REST, 2 for HTTP)
+     - endpoint_type: REGIONAL or EDGE
+     - security_policy: TLS version
+     - acm_certificate_arn: Optional certificate ARN
+     - ip_address_type: IPV4 or DUAL
+     - mutual_tls: Optional mTLS configuration
+   - acm_certificate_arn: Default SSL certificate ARN
+   - cloudwatch_role_enabled: Enable CloudWatch logging
+   - endpoint_config_types: List of endpoint types
+   - rest_vpc_link_arn: Optional VPC Link for REST API
+   - http_vpc_link: Optional VPC Link for HTTP API
 
-3. Initialize and apply:
+3. For Terragrunt setup:
+   - Create terragrunt.hcl in your module directory
+   - Configure dependencies for ACM, VPC, etc.
+   - Set environment-specific variables
+
+4. Initialize and apply:
    ```bash
+   # For Terraform
    terraform init
    terraform plan
    terraform apply
+
+   # For Terragrunt
+   terragrunt init
+   terragrunt plan
+   terragrunt apply
    ```
 
-4. Access your API endpoints using the generated domain names
+5. Access your API endpoints using the generated domain names
+
+6. Optional configurations:
+   - Set up mutual TLS authentication
+   - Configure VPC links for private integrations
+   - Enable CloudWatch logging
+   - Configure custom domain names
 
 
 ## Examples
 
-Terragrunt implementation example:
+Terragrunt implementation examples:
 
+Basic setup with REST API (v1):
 ```hcl
 include "root" {
   path = find_in_parent_folders()
@@ -119,18 +175,78 @@ terraform {
   source = "cloudopsworks/api-gateway-setup/aws"
 }
 
+dependency "acm" {
+  config_path = "../acm"
+}
+
+dependency "nlb" {
+  config_path = "../nlb"
+}
+
 inputs = {
   name_prefix           = "customer"
   system_name          = "staging"
-  domain_zone         = "api.example.com"
-  apigw_domains       = ["v1", "v2"]
-  acm_certificate_arn = dependency.acm.outputs.certificate_arn
-
+  domain_zone          = "api.example.com"
+  apigw_domains        = [
+    {
+      domain_name         = "v1"
+      version            = 1
+      endpoint_type      = "REGIONAL"
+      security_policy    = "TLS_1_2"
+      acm_certificate_arn = null
+    }
+  ]
+  acm_certificate_arn    = dependency.acm.outputs.certificate_arn
   cloudwatch_role_enabled = true
   endpoint_config_types   = ["REGIONAL"]
+  rest_vpc_link_arn      = dependency.nlb.outputs.lb_arn
+  tags = {
+    Environment = "staging"
+    Project     = "customer-api"
+  }
+}
+```
 
-  rest_vpc_link_arn    = dependency.nlb.outputs.lb_arn
+HTTP API (v2) with mutual TLS:
+```hcl
+include "root" {
+  path = find_in_parent_folders()
+}
 
+terraform {
+  source = "cloudopsworks/api-gateway-setup/aws"
+}
+
+dependency "acm" {
+  config_path = "../acm"
+}
+
+inputs = {
+  name_prefix           = "customer"
+  system_name          = "staging"
+  domain_zone          = "api.example.com"
+  apigw_domains        = [
+    {
+      domain_name         = "v2"
+      version            = 2
+      endpoint_type      = "REGIONAL"
+      security_policy    = "TLS_1_2"
+      acm_certificate_arn = null
+      ip_address_type    = "IPV4"
+      mutual_tls         = {
+        truststore_uri     = "s3://bucket-name/key"
+        truststore_version = "1.0"
+      }
+    }
+  ]
+  acm_certificate_arn    = dependency.acm.outputs.certificate_arn
+  cloudwatch_role_enabled = true
+  endpoint_config_types   = ["REGIONAL"]
+  http_vpc_link         = [{
+    name               = "http-vpc-link"
+    subnet_ids         = dependency.vpc.outputs.private_subnets
+    security_group_ids = [dependency.sg.outputs.security_group_id]
+  }]
   tags = {
     Environment = "staging"
     Project     = "customer-api"
@@ -176,6 +292,7 @@ Available targets:
 | [aws_api_gateway_account.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_account) | resource |
 | [aws_api_gateway_domain_name.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_domain_name) | resource |
 | [aws_api_gateway_vpc_link.vpc_link](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_vpc_link) | resource |
+| [aws_apigatewayv2_domain_name.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_domain_name) | resource |
 | [aws_apigatewayv2_vpc_link.vpc_link](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_vpc_link) | resource |
 | [aws_iam_role.cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy.cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
@@ -192,7 +309,7 @@ Available targets:
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_acm_certificate_arn"></a> [acm\_certificate\_arn](#input\_acm\_certificate\_arn) | ACM Certificate ARN to use for the API Gateway Domain Names | `string` | n/a | yes |
-| <a name="input_apigw_domains"></a> [apigw\_domains](#input\_apigw\_domains) | List of API Gateway Domain Names to create | `list(string)` | `[]` | no |
+| <a name="input_apigw_domains"></a> [apigw\_domains](#input\_apigw\_domains) | List of API Gateway Domain Names to create | <pre>list(object({<br/>    domain_name         = string<br/>    version             = optional(number, 1)       # Default version is 1 if not specified<br/>    acm_certificate_arn = optional(string, null)    # Optional ACM Certificate ARN<br/>    endpoint_type       = optional(string, null)    # Default endpoint type is null, which will use the default from the variable<br/>    security_policy     = optional(string, null)    # Default security policy is null, which will use the default from the variable<br/>    ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4<br/>    mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration<br/>  }))</pre> | `[]` | no |
 | <a name="input_cloudwatch_role_enabled"></a> [cloudwatch\_role\_enabled](#input\_cloudwatch\_role\_enabled) | Enable CloudWatch Role for API Gateway Account | `bool` | `true` | no |
 | <a name="input_domain_zone"></a> [domain\_zone](#input\_domain\_zone) | The domain zone to create the domain names in | `string` | n/a | yes |
 | <a name="input_endpoint_config_types"></a> [endpoint\_config\_types](#input\_endpoint\_config\_types) | Endpoint Configuration Types for the API Gateway Domain Names | `list(string)` | <pre>[<br/>  "REGIONAL"<br/>]</pre> | no |
@@ -202,6 +319,7 @@ Available targets:
 | <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Prefix for the name of the resources | `string` | `""` | no |
 | <a name="input_org"></a> [org](#input\_org) | n/a | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
 | <a name="input_rest_vpc_link_arn"></a> [rest\_vpc\_link\_arn](#input\_rest\_vpc\_link\_arn) | VPC Link ARN for the REST API (Load Balancer) | `string` | `""` | no |
+| <a name="input_security_policy"></a> [security\_policy](#input\_security\_policy) | Security Policy for the API Gateway Domain Names | `string` | `"TLS_1_2"` | no |
 | <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | n/a | `string` | `"001"` | no |
 
 ## Outputs
@@ -210,6 +328,10 @@ Available targets:
 |------|-------------|
 | <a name="output_apigw_account"></a> [apigw\_account](#output\_apigw\_account) | n/a |
 | <a name="output_apigw_domains"></a> [apigw\_domains](#output\_apigw\_domains) | n/a |
+| <a name="output_apigw_http_vpc_link_id"></a> [apigw\_http\_vpc\_link\_id](#output\_apigw\_http\_vpc\_link\_id) | n/a |
+| <a name="output_apigw_http_vpc_link_name"></a> [apigw\_http\_vpc\_link\_name](#output\_apigw\_http\_vpc\_link\_name) | n/a |
+| <a name="output_apigw_rest_vpc_link_id"></a> [apigw\_rest\_vpc\_link\_id](#output\_apigw\_rest\_vpc\_link\_id) | n/a |
+| <a name="output_apigw_rest_vpc_link_name"></a> [apigw\_rest\_vpc\_link\_name](#output\_apigw\_rest\_vpc\_link\_name) | n/a |
 | <a name="output_apigw_role_arn"></a> [apigw\_role\_arn](#output\_apigw\_role\_arn) | n/a |
 
 

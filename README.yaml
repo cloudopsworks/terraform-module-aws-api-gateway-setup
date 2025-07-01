@@ -11,16 +11,21 @@ copyrights:
 github_repo: cloudopsworks/terraform-module-aws-api-gateway-setup
 
 description: |-
-  Module for setting up API Gateway with basic settings.
+  Comprehensive AWS API Gateway module supporting both REST and HTTP APIs with advanced features including custom domains, VPC links, mutual TLS authentication, and CloudWatch integration. This module provides complete infrastructure setup for API Gateway v1 and v2 with regional and edge-optimized endpoints.
 
 # Introduction to the project
 introduction: |-
-  This Terraform module provides a streamlined setup for AWS API Gateway with essential configurations. It supports:
-  - Custom domain names with TLS 1.2 security
-  - CloudWatch logging integration
-  - VPC Link setup for private integrations
-  - Regional endpoint configuration
+  This Terraform module provides a comprehensive setup for AWS API Gateway with advanced configurations. It supports:
+  - Multiple API Gateway versions (v1 REST and v2 HTTP APIs)
+  - Custom domain names with configurable security policies (TLS 1.2)
+  - Mutual TLS authentication for enhanced security
+  - CloudWatch logging with automated role configuration
+  - VPC Link setup for private integrations (both REST and HTTP API)
+  - Regional and Edge-optimized endpoint configurations
   - Automated IAM role and policy management
+  - Multiple domain configurations with certificate management
+  - IP address type configuration for APIs
+  - Flexible tagging system
 
 # How to use this project
 usage: |-
@@ -32,19 +37,42 @@ usage: |-
   
     name_prefix           = "myapi"
     system_name          = "production"
-    domain_zone         = "example.com"
-    apigw_domains       = ["api", "dev-api"]
-    acm_certificate_arn = "arn:aws:acm:region:account:certificate/xxx"
-  
+    domain_zone          = "example.com"
+    apigw_domains        = [
+      {
+        domain_name         = "api"
+        version            = 1
+        endpoint_type      = "REGIONAL"
+        security_policy    = "TLS_1_2"
+        acm_certificate_arn = null
+        ip_address_type    = "IPV4"
+        mutual_tls         = {}
+      },
+      {
+        domain_name         = "dev-api"
+        version            = 2
+        endpoint_type      = "REGIONAL"
+        security_policy    = "TLS_1_2"
+        acm_certificate_arn = null
+        ip_address_type    = "IPV4"
+        mutual_tls         = {
+          truststore_uri     = "s3://bucket-name/key"
+          truststore_version = "1.0"
+        }
+      }
+    ]
+    acm_certificate_arn    = "arn:aws:acm:region:account:certificate/xxx"
     cloudwatch_role_enabled = true
     endpoint_config_types   = ["REGIONAL"]
+    rest_vpc_link_arn      = "arn:aws:elasticloadbalancing:region:account:loadbalancer/net/name/id"
   }
   ```
 
 # Example usage
 examples: |-
-  Terragrunt implementation example:
+  Terragrunt implementation examples:
 
+  Basic setup with REST API (v1):
   ```hcl
   include "root" {
     path = find_in_parent_folders()
@@ -54,18 +82,78 @@ examples: |-
     source = "cloudopsworks/api-gateway-setup/aws"
   }
 
+  dependency "acm" {
+    config_path = "../acm"
+  }
+
+  dependency "nlb" {
+    config_path = "../nlb"
+  }
+
   inputs = {
     name_prefix           = "customer"
     system_name          = "staging"
-    domain_zone         = "api.example.com"
-    apigw_domains       = ["v1", "v2"]
-    acm_certificate_arn = dependency.acm.outputs.certificate_arn
-  
+    domain_zone          = "api.example.com"
+    apigw_domains        = [
+      {
+        domain_name         = "v1"
+        version            = 1
+        endpoint_type      = "REGIONAL"
+        security_policy    = "TLS_1_2"
+        acm_certificate_arn = null
+      }
+    ]
+    acm_certificate_arn    = dependency.acm.outputs.certificate_arn
     cloudwatch_role_enabled = true
     endpoint_config_types   = ["REGIONAL"]
-  
-    rest_vpc_link_arn    = dependency.nlb.outputs.lb_arn
-  
+    rest_vpc_link_arn      = dependency.nlb.outputs.lb_arn
+    tags = {
+      Environment = "staging"
+      Project     = "customer-api"
+    }
+  }
+  ```
+
+  HTTP API (v2) with mutual TLS:
+  ```hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+
+  terraform {
+    source = "cloudopsworks/api-gateway-setup/aws"
+  }
+
+  dependency "acm" {
+    config_path = "../acm"
+  }
+
+  inputs = {
+    name_prefix           = "customer"
+    system_name          = "staging"
+    domain_zone          = "api.example.com"
+    apigw_domains        = [
+      {
+        domain_name         = "v2"
+        version            = 2
+        endpoint_type      = "REGIONAL"
+        security_policy    = "TLS_1_2"
+        acm_certificate_arn = null
+        ip_address_type    = "IPV4"
+        mutual_tls         = {
+          truststore_uri     = "s3://bucket-name/key"
+          truststore_version = "1.0"
+        }
+      }
+    ]
+    acm_certificate_arn    = dependency.acm.outputs.certificate_arn
+    cloudwatch_role_enabled = true
+    endpoint_config_types   = ["REGIONAL"]
+    http_vpc_link         = [{
+      name               = "http-vpc-link"
+      subnet_ids         = dependency.vpc.outputs.private_subnets
+      security_group_ids = [dependency.sg.outputs.security_group_id]
+    }]
     tags = {
       Environment = "staging"
       Project     = "customer-api"
@@ -78,26 +166,54 @@ quickstart: |-
   1. Add the module to your Terraform configuration:
      ```hcl
      module "api_gateway" {
-       source = "cloudopsworks/api-gateway-setup/aws"
+       source  = "cloudopsworks/api-gateway-setup/aws"
        version = "1.0.0"
      }
      ```
-  
+
   2. Configure required variables:
-     - name_prefix: Prefix for resource names
-     - system_name: System identifier
-     - domain_zone: Base domain for API endpoints
-     - apigw_domains: List of subdomains
-     - acm_certificate_arn: SSL certificate ARN
-  
-  3. Initialize and apply:
+     - name_prefix: Prefix for resource names (e.g., "myapi")
+     - system_name: System identifier (e.g., "production")
+     - domain_zone: Base domain for API endpoints (e.g., "api.example.com")
+     - apigw_domains: List of domain configurations with:
+       - domain_name: Subdomain name
+       - version: API Gateway version (1 for REST, 2 for HTTP)
+       - endpoint_type: REGIONAL or EDGE
+       - security_policy: TLS version
+       - acm_certificate_arn: Optional certificate ARN
+       - ip_address_type: IPV4 or DUAL
+       - mutual_tls: Optional mTLS configuration
+     - acm_certificate_arn: Default SSL certificate ARN
+     - cloudwatch_role_enabled: Enable CloudWatch logging
+     - endpoint_config_types: List of endpoint types
+     - rest_vpc_link_arn: Optional VPC Link for REST API
+     - http_vpc_link: Optional VPC Link for HTTP API
+
+  3. For Terragrunt setup:
+     - Create terragrunt.hcl in your module directory
+     - Configure dependencies for ACM, VPC, etc.
+     - Set environment-specific variables
+
+  4. Initialize and apply:
      ```bash
+     # For Terraform
      terraform init
      terraform plan
      terraform apply
+
+     # For Terragrunt
+     terragrunt init
+     terragrunt plan
+     terragrunt apply
      ```
-  
-  4. Access your API endpoints using the generated domain names
+
+  5. Access your API endpoints using the generated domain names
+
+  6. Optional configurations:
+     - Set up mutual TLS authentication
+     - Configure VPC links for private integrations
+     - Enable CloudWatch logging
+     - Configure custom domain names
 
 include:
   - "docs/targets.md"
