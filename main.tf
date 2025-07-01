@@ -34,8 +34,13 @@ resource "aws_api_gateway_domain_name" "this" {
     for domain in var.apigw_domains : domain.domain_name => domain
     if domain.version == 1
   }
-  domain_name     = format("%s.%s", each.value.domain_name, var.domain_zone)
-  certificate_arn = each.value.acm_certificate_arn != null ? each.value.acm_certificate_arn : var.acm_certificate_arn
+  domain_name = format("%s.%s", each.value.domain_name, var.domain_zone)
+  certificate_arn = each.value.endpoint_type != "REGIONAL" && !contains(var.endpoint_config_types, "REGIONAL") ? (
+    each.value.acm_certificate_arn != null ? each.value.acm_certificate_arn : var.acm_certificate_arn
+  ) : null
+  regional_certificate_arn = each.value.endpoint_type == "REGIONAL" || contains(var.endpoint_config_types, "REGIONAL") ? (
+    each.value.acm_certificate_arn != null ? each.value.acm_certificate_arn : var.acm_certificate_arn
+  ) : null
   security_policy = each.value.security_policy != null ? each.value.security_policy : var.security_policy
   endpoint_configuration {
     types = each.value.endpoint_type != null ? [each.value.endpoint_type] : var.endpoint_config_types
