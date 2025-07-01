@@ -24,7 +24,7 @@ resource "aws_apigatewayv2_domain_name" "this" {
     }
   }
   tags = merge({
-    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value.domain_name, local.system_name) : format("apigw-%s-%s", each.value, local.system_name)
+    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value.domain_name, local.system_name) : format("apigw-%s-%s", each.value.domain_name, local.system_name)
     },
   local.all_tags)
 }
@@ -41,7 +41,7 @@ resource "aws_api_gateway_domain_name" "this" {
     types = each.value.endpoint_type != null ? [each.value.endpoint_type] : var.endpoint_config_types
   }
   tags = merge({
-    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value.domain_name, local.system_name) : format("apigw-%s-%s", each.value, local.system_name)
+    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value.domain_name, local.system_name) : format("apigw-%s-%s", each.value.domain_name, local.system_name)
     },
   local.all_tags)
 }
