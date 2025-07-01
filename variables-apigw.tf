@@ -8,7 +8,6 @@ variable "name_prefix" {
   description = "Prefix for the name of the resources"
   type        = string
   default     = ""
-
 }
 
 variable "apigw_domains" {
@@ -40,12 +39,14 @@ variable "endpoint_config_types" {
   description = "Endpoint Configuration Types for the API Gateway Domain Names"
   type        = list(string)
   default     = ["REGIONAL"]
+  nullable    = false
 }
 
 variable "security_policy" {
   description = "Security Policy for the API Gateway Domain Names"
   type        = string
   default     = "TLS_1_2"
+  nullable    = false
 }
 
 variable "rest_vpc_link_arn" {
@@ -71,4 +72,5 @@ variable "cloudwatch_role_enabled" {
   description = "Enable CloudWatch Role for API Gateway Account"
   type        = bool
   default     = true
+  nullable    = false
 }

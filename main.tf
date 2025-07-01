@@ -12,8 +12,8 @@ resource "aws_apigatewayv2_domain_name" "this" {
   domain_name = format("%s.%s", each.value.domain_name, var.domain_zone)
   domain_name_configuration {
     certificate_arn = each.value.acm_certificate_arn != null ? each.value.acm_certificate_arn : var.acm_certificate_arn
-    endpoint_type   = each.value.endpoint_type != null ? each.value.endpoint_type : var.endpoint_config_types[0]
     security_policy = each.value.security_policy != null ? each.value.security_policy : var.security_policy
+    endpoint_type   = each.value.endpoint_type != null ? each.value.endpoint_type : var.endpoint_config_types[0]
     ip_address_type = each.value.ip_address_type
   }
   dynamic "mutual_tls_authentication" {
@@ -24,7 +24,7 @@ resource "aws_apigatewayv2_domain_name" "this" {
     }
   }
   tags = merge({
-    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value, local.system_name) : format("apigw-%s-%s", each.value, local.system_name)
+    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value.domain_name, local.system_name) : format("apigw-%s-%s", each.value.domain_name, local.system_name)
     },
   local.all_tags)
 }
@@ -34,14 +34,19 @@ resource "aws_api_gateway_domain_name" "this" {
     for domain in var.apigw_domains : domain.domain_name => domain
     if domain.version == 1
   }
-  domain_name              = format("%s.%s", each.value, var.domain_zone)
-  regional_certificate_arn = var.acm_certificate_arn
-  security_policy          = var.security_policy
+  domain_name = format("%s.%s", each.value.domain_name, var.domain_zone)
+  certificate_arn = each.value.endpoint_type != "REGIONAL" && !contains(var.endpoint_config_types, "REGIONAL") ? (
+    each.value.acm_certificate_arn != null ? each.value.acm_certificate_arn : var.acm_certificate_arn
+  ) : null
+  regional_certificate_arn = each.value.endpoint_type == "REGIONAL" || contains(var.endpoint_config_types, "REGIONAL") ? (
+    each.value.acm_certificate_arn != null ? each.value.acm_certificate_arn : var.acm_certificate_arn
+  ) : null
+  security_policy = each.value.security_policy != null ? each.value.security_policy : var.security_policy
   endpoint_configuration {
-    types = var.endpoint_config_types
+    types = each.value.endpoint_type != null ? [each.value.endpoint_type] : var.endpoint_config_types
   }
   tags = merge({
-    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value, local.system_name) : format("apigw-%s-%s", each.value, local.system_name)
+    Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value.domain_name, local.system_name) : format("apigw-%s-%s", each.value.domain_name, local.system_name)
     },
   local.all_tags)
 }
