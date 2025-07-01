@@ -13,8 +13,16 @@ variable "name_prefix" {
 
 variable "apigw_domains" {
   description = "List of API Gateway Domain Names to create"
-  type        = list(string)
-  default     = []
+  type = list(object({
+    domain_name         = string
+    version             = optional(number, 1)       # Default version is 1 if not specified
+    acm_certificate_arn = optional(string, null)    # Optional ACM Certificate ARN
+    endpoint_type       = optional(string, null)    # Default endpoint type is null, which will use the default from the variable
+    security_policy     = optional(string, null)    # Default security policy is null, which will use the default from the variable
+    ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4
+    mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration
+  }))
+  default = []
 }
 
 variable "domain_zone" {
@@ -32,6 +40,12 @@ variable "endpoint_config_types" {
   description = "Endpoint Configuration Types for the API Gateway Domain Names"
   type        = list(string)
   default     = ["REGIONAL"]
+}
+
+variable "security_policy" {
+  description = "Security Policy for the API Gateway Domain Names"
+  type        = string
+  default     = "TLS_1_2"
 }
 
 variable "rest_vpc_link_arn" {
