@@ -1,7 +1,10 @@
 ##
-# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
-#            On GitHub: https://github.com/cloudopsworks
-#            Distributed Under Apache v2.0 License
+# (c) 2021-2025
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
 #
 
 variable "name_prefix" {
@@ -15,9 +18,9 @@ variable "apigw_domains" {
   type = list(object({
     domain_name         = string
     version             = optional(number, 1)       # Default version is 1 if not specified
-    acm_certificate_arn = optional(string, null)    # Optional ACM Certificate ARN
-    endpoint_type       = optional(string, null)    # Default endpoint type is null, which will use the default from the variable
-    security_policy     = optional(string, null)    # Default security policy is null, which will use the default from the variable
+    acm_certificate_arn = optional(string, "")      # Optional ACM Certificate ARN
+    endpoint_type       = optional(string, "")      # Default endpoint type is null, which will use the default from the variable
+    security_policy     = optional(string, "")      # Default security policy is null, which will use the default from the variable
     ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4
     mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration
   }))
@@ -33,6 +36,8 @@ variable "domain_zone" {
 variable "acm_certificate_arn" {
   description = "ACM Certificate ARN to use for the API Gateway Domain Names"
   type        = string
+  default     = ""
+  nullable    = false
 }
 
 variable "endpoint_config_types" {
@@ -73,4 +78,22 @@ variable "cloudwatch_role_enabled" {
   type        = bool
   default     = true
   nullable    = false
+}
+
+variable "cross_account_acm" {
+  description = "The cross account to use for the Certificate domain, aws.cross_account provider must be set to module."
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
+variable "alerts" {
+  description = "Enable alerts for API Gateway"
+  type = object({
+    enabled       = optional(bool, false)
+    priority      = optional(number, 3)
+    sns_topic_arn = optional(string, "")
+  })
+  default  = {}
+  nullable = false
 }
