@@ -1,7 +1,10 @@
 ##
-# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
-#            On GitHub: https://github.com/cloudopsworks
-#            Distributed Under Apache v2.0 License
+# (c) 2021-2025
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
 #
 
 variable "name_prefix" {
@@ -15,9 +18,9 @@ variable "apigw_domains" {
   type = list(object({
     domain_name         = string
     version             = optional(number, 1)       # Default version is 1 if not specified
-    acm_certificate_arn = optional(string, null)    # Optional ACM Certificate ARN
-    endpoint_type       = optional(string, null)    # Default endpoint type is null, which will use the default from the variable
-    security_policy     = optional(string, null)    # Default security policy is null, which will use the default from the variable
+    acm_certificate_arn = optional(string, "")      # Optional ACM Certificate ARN
+    endpoint_type       = optional(string, "")      # Default endpoint type is null, which will use the default from the variable
+    security_policy     = optional(string, "")      # Default security policy is null, which will use the default from the variable
     ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4
     mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration
   }))
@@ -72,5 +75,12 @@ variable "cloudwatch_role_enabled" {
   description = "Enable CloudWatch Role for API Gateway Account"
   type        = bool
   default     = true
+  nullable    = false
+}
+
+variable "cross_account" {
+  description = "The cross account to use for the Certificate domain, aws.cross_account provider must be set to module."
+  type        = bool
+  default     = false
   nullable    = false
 }

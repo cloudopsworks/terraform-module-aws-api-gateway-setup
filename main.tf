@@ -1,7 +1,10 @@
 ##
-# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
-#            On GitHub: https://github.com/cloudopsworks
-#            Distributed Under Apache v2.0 License
+# (c) 2021-2025
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
 #
 
 resource "aws_apigatewayv2_domain_name" "this" {
@@ -11,9 +14,9 @@ resource "aws_apigatewayv2_domain_name" "this" {
   }
   domain_name = format("%s.%s", each.value.domain_name, var.domain_zone)
   domain_name_configuration {
-    certificate_arn = each.value.acm_certificate_arn != null ? each.value.acm_certificate_arn : var.acm_certificate_arn
-    security_policy = each.value.security_policy != null ? each.value.security_policy : var.security_policy
-    endpoint_type   = each.value.endpoint_type != null ? each.value.endpoint_type : var.endpoint_config_types[0]
+    certificate_arn = each.value.acm_certificate_arn != "" ? each.value.acm_certificate_arn : var.acm_certificate_arn
+    security_policy = each.value.security_policy != "" ? each.value.security_policy : var.security_policy
+    endpoint_type   = each.value.endpoint_type != "" ? each.value.endpoint_type : var.endpoint_config_types[0]
     ip_address_type = each.value.ip_address_type
   }
   dynamic "mutual_tls_authentication" {

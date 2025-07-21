@@ -11,21 +11,46 @@ copyrights:
 github_repo: cloudopsworks/terraform-module-aws-api-gateway-setup
 
 description: |-
-  Comprehensive AWS API Gateway module supporting both REST and HTTP APIs with advanced features including custom domains, VPC links, mutual TLS authentication, and CloudWatch integration. This module provides complete infrastructure setup for API Gateway v1 and v2 with regional and edge-optimized endpoints.
+  Comprehensive AWS API Gateway module supporting both REST (v1) and HTTP (v2) APIs with advanced features including custom domains, VPC links, mutual TLS authentication, and CloudWatch integration. This module provides complete infrastructure setup for API Gateway with:
+
+  - Custom domain management for both v1 and v2 APIs
+  - Regional and edge-optimized endpoint support
+  - Mutual TLS authentication for enhanced security
+  - VPC Link integration for private API access
+  - Automated ACM certificate management
+  - CloudWatch logging configuration
+  - Cross-account certificate management
+  - Flexible IP address type configuration (IPv4/dual-stack)
+  - Comprehensive tagging system
+  - Multiple domain configurations per API Gateway
 
 # Introduction to the project
 introduction: |-
-  This Terraform module provides a comprehensive setup for AWS API Gateway with advanced configurations. It supports:
-  - Multiple API Gateway versions (v1 REST and v2 HTTP APIs)
-  - Custom domain names with configurable security policies (TLS 1.2)
-  - Mutual TLS authentication for enhanced security
-  - CloudWatch logging with automated role configuration
-  - VPC Link setup for private integrations (both REST and HTTP API)
-  - Regional and Edge-optimized endpoint configurations
-  - Automated IAM role and policy management
-  - Multiple domain configurations with certificate management
-  - IP address type configuration for APIs
-  - Flexible tagging system
+  This Terraform module provides a comprehensive setup for AWS API Gateway with advanced configurations and security features. It offers:
+
+  API Gateway Support:
+  - REST API (v1) with regional and edge-optimized endpoints
+  - HTTP API (v2) with enhanced performance and lower latency
+  - Multiple domain configurations per API Gateway instance
+
+  Security Features:
+  - Custom domain names with TLS 1.2 security policies
+  - Mutual TLS (mTLS) authentication support for HTTP APIs
+  - ACM certificate integration with cross-account support
+  - VPC Link integration for secure private network access
+
+  Infrastructure Management:
+  - Automated CloudWatch logging role configuration
+  - IAM role and policy management for API Gateway services
+  - Flexible endpoint configuration (REGIONAL/EDGE)
+  - IPv4 and dual-stack IP address support
+  - Comprehensive resource tagging system
+
+  Integration Capabilities:
+  - VPC Link setup for REST API private integrations
+  - HTTP API VPC Link with security group and subnet configuration
+  - Cross-account certificate management
+  - Multiple domain and subdomain management
 
 # How to use this project
 usage: |-
@@ -35,37 +60,159 @@ usage: |-
   module "api_gateway" {
     source = "cloudopsworks/api-gateway-setup/aws"
   
-    name_prefix           = "myapi"
-    system_name          = "production"
-    domain_zone          = "example.com"
-    apigw_domains        = [
+    # General Configuration
+    name_prefix  = "myapi"        # Prefix for resource names
+    system_name = "production"    # System identifier
+    domain_zone = "example.com"   # Base domain for API endpoints
+
+    # Domain Configurations
+    apigw_domains = [
+      # REST API (v1) Configuration
       {
-        domain_name         = "api"
-        version            = 1
-        endpoint_type      = "REGIONAL"
-        security_policy    = "TLS_1_2"
-        acm_certificate_arn = null
-        ip_address_type    = "IPV4"
-        mutual_tls         = {}
+        domain_name         = "api"          # Subdomain name: api.example.com
+        version            = 1              # REST API version
+        endpoint_type      = "REGIONAL"     # REGIONAL or EDGE
+        security_policy    = "TLS_1_2"     # TLS security policy
+        acm_certificate_arn = null         # Optional specific certificate
+        ip_address_type    = "IPV4"       # IPv4 or DUAL
       },
+      # HTTP API (v2) Configuration with mTLS
       {
-        domain_name         = "dev-api"
-        version            = 2
-        endpoint_type      = "REGIONAL"
-        security_policy    = "TLS_1_2"
-        acm_certificate_arn = null
-        ip_address_type    = "IPV4"
+        domain_name         = "dev-api"     # Subdomain name: dev-api.example.com
+        version            = 2              # HTTP API version
+        endpoint_type      = "REGIONAL"     # REGIONAL endpoint type
+        security_policy    = "TLS_1_2"     # TLS security policy
+        acm_certificate_arn = null         # Use default certificate
+        ip_address_type    = "IPV4"       # IPv4 address type
         mutual_tls         = {
-          truststore_uri     = "s3://bucket-name/key"
-          truststore_version = "1.0"
+          truststore_uri     = "s3://bucket-name/key"  # S3 URI for truststore
+          truststore_version = "1.0"                   # Truststore version
         }
       }
     ]
+
+    # SSL/TLS Configuration
     acm_certificate_arn    = "arn:aws:acm:region:account:certificate/xxx"
-    cloudwatch_role_enabled = true
-    endpoint_config_types   = ["REGIONAL"]
+
+    # Logging Configuration
+    cloudwatch_role_enabled = true     # Enable CloudWatch logging
+
+    # Endpoint Configuration
+    endpoint_config_types   = ["REGIONAL"]  # REGIONAL or EDGE
+
+    # VPC Link Configuration (REST API)
     rest_vpc_link_arn      = "arn:aws:elasticloadbalancing:region:account:loadbalancer/net/name/id"
+
+    # VPC Link Configuration (HTTP API)
+    http_vpc_link = {
+      name               = "http-vpc-link"
+      subnet_ids         = ["subnet-xxx", "subnet-yyy"]
+      security_group_ids = ["sg-xxx"]
+    }
+
+    # Optional Cross-Account Configuration
+    cross_account = false    # Enable cross-account certificate management
   }
+  ```
+
+  Variable Definitions:
+
+  ```yaml
+  name_prefix:
+    description: Prefix for resource names
+    type: string
+    required: true
+
+  system_name:
+    description: System identifier for tagging
+    type: string
+    required: true
+
+  domain_zone:
+    description: Base domain for API endpoints
+    type: string
+    required: true
+
+  apigw_domains:
+    description: List of API Gateway domain configurations
+    type: list(object)
+    required: true
+    properties:
+      domain_name:
+        description: Subdomain name
+        type: string
+        required: true
+      version:
+        description: API version (1 for REST, 2 for HTTP)
+        type: number
+        default: 1
+      endpoint_type:
+        description: REGIONAL or EDGE
+        type: string
+        default: REGIONAL
+      security_policy:
+        description: TLS version
+        type: string
+        default: TLS_1_2
+      acm_certificate_arn:
+        description: Specific ACM certificate ARN
+        type: string
+        optional: true
+      ip_address_type:
+        description: IPv4 or DUAL
+        type: string
+        default: IPV4
+      mutual_tls:
+        description: mTLS configuration
+        type: map
+        optional: true
+        properties:
+          truststore_uri:
+            description: S3 URI for truststore
+            type: string
+          truststore_version:
+            description: Truststore version
+            type: string
+
+  acm_certificate_arn:
+    description: Default ACM certificate ARN
+    type: string
+    required: true
+
+  cloudwatch_role_enabled:
+    description: Enable CloudWatch logging
+    type: bool
+    default: true
+
+  endpoint_config_types:
+    description: List of endpoint types
+    type: list(string)
+    default: ["REGIONAL"]
+
+  rest_vpc_link_arn:
+    description: VPC Link ARN for REST API
+    type: string
+    optional: true
+
+  http_vpc_link:
+    description: VPC Link configuration for HTTP API
+    type: map
+    optional: true
+    properties:
+      name:
+        description: VPC Link name
+        type: string
+      subnet_ids:
+        description: List of subnet IDs
+        type: list(string)
+      security_group_ids:
+        description: List of security group IDs
+        type: list(string)
+
+  cross_account:
+    description: Enable cross-account certificate management
+    type: bool
+    default: false
   ```
 
 # Example usage
@@ -88,6 +235,24 @@ examples: |-
 
   dependency "nlb" {
     config_path = "../nlb"
+  }
+  
+  # Generate global cross_account provider block
+  generate "provider_l" {
+    path = "provider.l.tf"
+    #   disable     = !local.cross_account
+    if_exists   = "overwrite_terragrunt"
+    if_disabled = "remove_terragrunt"
+    contents    = <<EOF
+    provider "aws" {
+      alias = "${local.cross_account_alias}"
+      region = "${local.cross_account_region}"
+      assume_role {
+        role_arn     = "${local.cross_account_sts_role_arn}"
+        session_name = "terragrunt"
+      }
+    }
+    EOF
   }
 
   inputs = {
