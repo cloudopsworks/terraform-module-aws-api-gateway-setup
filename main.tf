@@ -44,10 +44,14 @@ resource "aws_api_gateway_domain_name" "this" {
   }
   domain_name = format("%s.%s", each.value.domain_name, var.domain_zone)
   certificate_arn = each.value.endpoint_type != "REGIONAL" && !contains(var.endpoint_config_types, "REGIONAL") ? (
-    each.value.acm_certificate_arn != "" ? each.value.acm_certificate_arn : var.acm_certificate_arn
+    each.value.acm_certificate_arn != "" ? each.value.acm_certificate_arn : (
+      var.acm_certificate_arn != "" ? var.acm_certificate_arn : module.certificates.acm_certificate_arn
+    )
   ) : null
   regional_certificate_arn = each.value.endpoint_type == "REGIONAL" || contains(var.endpoint_config_types, "REGIONAL") ? (
-    each.value.acm_certificate_arn != "" ? each.value.acm_certificate_arn : var.acm_certificate_arn
+    each.value.acm_certificate_arn != "" ? each.value.acm_certificate_arn : (
+      var.acm_certificate_arn != "" ? var.acm_certificate_arn : module.certificates.acm_certificate_arn
+    )
   ) : null
   security_policy = each.value.security_policy != "" ? each.value.security_policy : var.security_policy
   endpoint_configuration {
