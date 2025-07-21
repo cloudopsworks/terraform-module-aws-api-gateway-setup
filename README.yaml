@@ -11,18 +11,36 @@ copyrights:
 github_repo: cloudopsworks/terraform-module-aws-api-gateway-setup
 
 description: |-
-  Comprehensive AWS API Gateway module supporting both REST (v1) and HTTP (v2) APIs with advanced features including custom domains, VPC links, mutual TLS authentication, and CloudWatch integration. This module provides complete infrastructure setup for API Gateway with:
+  Terraform module for AWS API Gateway that provides a comprehensive setup for both REST API (v1) and HTTP API (v2) with enterprise-grade features and security configurations. Key features include:
 
-  - Custom domain management for both v1 and v2 APIs
-  - Regional and edge-optimized endpoint support
-  - Mutual TLS authentication for enhanced security
-  - VPC Link integration for private API access
-  - Automated ACM certificate management
-  - CloudWatch logging configuration
+  API Types and Endpoints:
+  - REST API (v1) with regional and edge-optimized endpoints
+  - HTTP API (v2) for enhanced performance and cost optimization
+  - Multiple domain configurations per API Gateway instance
+  - Custom domain management with automated DNS configuration
+
+  Security Features:
+  - Mutual TLS (mTLS) authentication support
+  - TLS 1.2 security policy enforcement
+  - VPC Link integration for private endpoints
   - Cross-account certificate management
-  - Flexible IP address type configuration (IPv4/dual-stack)
+  - ACM certificate integration
+
+  Infrastructure Features:
+  - Automated CloudWatch logging setup
+  - Regional and edge endpoint optimization
+  - IPv4 and dual-stack support
+  - Multiple domain configurations
+  - VPC Link integration for private APIs
+  - Load balancer integration support
+  - Custom domain management
+  - Cross-account capabilities
+
+  Monitoring and Management:
+  - CloudWatch logging integration
+  - Automated IAM role configuration
   - Comprehensive tagging system
-  - Multiple domain configurations per API Gateway
+  - Alert configuration support
 
 # Introduction to the project
 introduction: |-

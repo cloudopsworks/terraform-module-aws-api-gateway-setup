@@ -36,6 +36,8 @@ variable "domain_zone" {
 variable "acm_certificate_arn" {
   description = "ACM Certificate ARN to use for the API Gateway Domain Names"
   type        = string
+  default     = ""
+  nullable    = false
 }
 
 variable "endpoint_config_types" {
@@ -78,9 +80,20 @@ variable "cloudwatch_role_enabled" {
   nullable    = false
 }
 
-variable "cross_account" {
+variable "cross_account_acm" {
   description = "The cross account to use for the Certificate domain, aws.cross_account provider must be set to module."
   type        = bool
   default     = false
   nullable    = false
+}
+
+variable "alerts" {
+  description = "Enable alerts for API Gateway"
+  type = object({
+    enabled       = optional(bool, false)
+    priority      = optional(number, 3)
+    sns_topic_arn = optional(string, "")
+  })
+  default  = {}
+  nullable = false
 }
