@@ -36,6 +36,7 @@ variable "domain_zone" {
 variable "acm_certificate_arn" {
   description = "ACM Certificate ARN to use for the API Gateway Domain Names"
   type        = string
+  default     = ""
 }
 
 variable "endpoint_config_types" {

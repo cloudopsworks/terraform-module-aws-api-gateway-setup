@@ -10,7 +10,7 @@
 locals {
   domains_list = [
     for d in var.apigw_domains : d.domain_name
-    if d.acm_certificate_arn != ""
+    if d.acm_certificate_arn != "" && var.acm_certificate_arn != ""
   ]
 }
 
