@@ -31,6 +31,10 @@ module "certificates" {
     for d in local.domains_list : format("%s.%s", d, var.domain_zone)
     if d != try(local.domains_list[0], "")
   ]
-  cross_account = var.cross_account
+  cross_account = var.cross_account_acm
   alerts        = var.alerts
+}
+
+output "domain_list" {
+  value = local.domains_list
 }

@@ -80,7 +80,7 @@ variable "cloudwatch_role_enabled" {
   nullable    = false
 }
 
-variable "cross_account" {
+variable "cross_account_acm" {
   description = "The cross account to use for the Certificate domain, aws.cross_account provider must be set to module."
   type        = bool
   default     = false
