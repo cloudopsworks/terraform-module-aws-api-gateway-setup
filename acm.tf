@@ -26,10 +26,10 @@ module "certificates" {
   source       = "git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git?ref=v1.2.3"
   create       = length(local.domains_list) > 0
   domain_zone  = var.domain_zone
-  domain_alias = format("%s.%s", local.domains_list[0], var.domain_zone)
+  domain_alias = format("%s.%s", try(local.domains_list[0], ""), var.domain_zone)
   domain_alternates = [
     for d in local.domains_list : format("%s.%s", d, var.domain_zone)
-    if d != local.domains_list[0]
+    if d != try(local.domains_list[0], "")
   ]
   cross_account = var.cross_account
   alerts        = var.alerts
