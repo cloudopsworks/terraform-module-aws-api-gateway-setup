@@ -3,18 +3,19 @@
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.81 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.4 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.99.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.4.0 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
+| <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.2.8 |
 | <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
 
 ## Resources
@@ -40,9 +41,11 @@
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_acm_certificate_arn"></a> [acm\_certificate\_arn](#input\_acm\_certificate\_arn) | ACM Certificate ARN to use for the API Gateway Domain Names | `string` | n/a | yes |
-| <a name="input_apigw_domains"></a> [apigw\_domains](#input\_apigw\_domains) | List of API Gateway Domain Names to create | <pre>list(object({<br/>    domain_name         = string<br/>    version             = optional(number, 1)       # Default version is 1 if not specified<br/>    acm_certificate_arn = optional(string, null)    # Optional ACM Certificate ARN<br/>    endpoint_type       = optional(string, null)    # Default endpoint type is null, which will use the default from the variable<br/>    security_policy     = optional(string, null)    # Default security policy is null, which will use the default from the variable<br/>    ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4<br/>    mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration<br/>  }))</pre> | `[]` | no |
+| <a name="input_acm_certificate_arn"></a> [acm\_certificate\_arn](#input\_acm\_certificate\_arn) | ACM Certificate ARN to use for the API Gateway Domain Names | `string` | `""` | no |
+| <a name="input_alerts"></a> [alerts](#input\_alerts) | Enable alerts for API Gateway | <pre>object({<br/>    enabled       = optional(bool, false)<br/>    priority      = optional(number, 3)<br/>    sns_topic_arn = optional(string, "")<br/>  })</pre> | `{}` | no |
+| <a name="input_apigw_domains"></a> [apigw\_domains](#input\_apigw\_domains) | List of API Gateway Domain Names to create | <pre>list(object({<br/>    domain_name         = string<br/>    version             = optional(number, 1)       # Default version is 1 if not specified<br/>    acm_certificate_arn = optional(string, "")      # Optional ACM Certificate ARN<br/>    endpoint_type       = optional(string, "")      # Default endpoint type is null, which will use the default from the variable<br/>    security_policy     = optional(string, "")      # Default security policy is null, which will use the default from the variable<br/>    ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4<br/>    mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration<br/>  }))</pre> | `[]` | no |
 | <a name="input_cloudwatch_role_enabled"></a> [cloudwatch\_role\_enabled](#input\_cloudwatch\_role\_enabled) | Enable CloudWatch Role for API Gateway Account | `bool` | `true` | no |
+| <a name="input_cross_account_acm"></a> [cross\_account\_acm](#input\_cross\_account\_acm) | The cross account to use for the Certificate domain, aws.cross\_account provider must be set to module. | `bool` | `false` | no |
 | <a name="input_domain_zone"></a> [domain\_zone](#input\_domain\_zone) | The domain zone to create the domain names in | `string` | n/a | yes |
 | <a name="input_endpoint_config_types"></a> [endpoint\_config\_types](#input\_endpoint\_config\_types) | Endpoint Configuration Types for the API Gateway Domain Names | `list(string)` | <pre>[<br/>  "REGIONAL"<br/>]</pre> | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | n/a | `map(string)` | `{}` | no |
