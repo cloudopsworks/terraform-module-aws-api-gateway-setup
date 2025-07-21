@@ -19,11 +19,11 @@ module "certificates" {
     aws               = aws
     aws.cross_account = aws.cross_account
   }
-  is_hub     = var.is_hub
-  spoke_def  = var.spoke_def
-  org        = var.org
-  extra_tags = var.extra_tags
-  source       = "git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git?ref=v1.2.2"
+  is_hub       = var.is_hub
+  spoke_def    = var.spoke_def
+  org          = var.org
+  extra_tags   = var.extra_tags
+  source       = "git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git?ref=v1.2.3"
   create       = length(local.domains_list) > 0
   domain_zone  = var.domain_zone
   domain_alias = format("%s.%s", local.domains_list[0], var.domain_zone)
@@ -32,4 +32,5 @@ module "certificates" {
     if d != local.domains_list[0]
   ]
   cross_account = var.cross_account
+  alerts        = var.alerts
 }

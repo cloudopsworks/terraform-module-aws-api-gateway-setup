@@ -14,7 +14,9 @@ resource "aws_apigatewayv2_domain_name" "this" {
   }
   domain_name = format("%s.%s", each.value.domain_name, var.domain_zone)
   domain_name_configuration {
-    certificate_arn = each.value.acm_certificate_arn != "" ? each.value.acm_certificate_arn : var.acm_certificate_arn
+    certificate_arn = each.value.acm_certificate_arn != "" ? each.value.acm_certificate_arn : (
+      var.acm_certificate_arn != "" ? var.acm_certificate_arn : module.certificates.acm_certificate_arn
+    )
     security_policy = each.value.security_policy != "" ? each.value.security_policy : var.security_policy
     endpoint_type   = each.value.endpoint_type != "" ? each.value.endpoint_type : var.endpoint_config_types[0]
     ip_address_type = each.value.ip_address_type
@@ -30,6 +32,9 @@ resource "aws_apigatewayv2_domain_name" "this" {
     Name = var.name_prefix != "" ? format("apigw-%s-%s-%s", var.name_prefix, each.value.domain_name, local.system_name) : format("apigw-%s-%s", each.value.domain_name, local.system_name)
     },
   local.all_tags)
+  depends_on = [
+    module.certificates
+  ]
 }
 
 resource "aws_api_gateway_domain_name" "this" {
