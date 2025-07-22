@@ -15,6 +15,7 @@ locals {
 }
 
 module "certificates" {
+  source = "git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git?ref=v1.2.8"
   providers = {
     aws               = aws
     aws.cross_account = aws.cross_account
@@ -23,7 +24,6 @@ module "certificates" {
   spoke_def    = var.spoke_def
   org          = var.org
   extra_tags   = var.extra_tags
-  source       = "git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git?ref=v1.2.8"
   create       = length(local.domains_list) > 0
   domain_zone  = var.domain_zone
   domain_alias = try(local.domains_list[0], "")
