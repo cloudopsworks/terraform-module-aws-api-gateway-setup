@@ -15,7 +15,7 @@ locals {
 }
 
 module "certificates" {
-  source = "git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git?ref=v1.2.8"
+  source = "git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git?ref=v1.2.9"
   providers = {
     aws               = aws
     aws.cross_account = aws.cross_account
@@ -33,4 +33,5 @@ module "certificates" {
   ]
   cross_account = var.cross_account_acm
   alerts        = var.alerts
+  name_prefix   = "api-gateway"
 }
