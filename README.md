@@ -461,13 +461,13 @@ Available targets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.4.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.4 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.2.8 |
+| <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.2.10 |
 | <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
 
 ## Resources
