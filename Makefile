@@ -6,7 +6,7 @@ provider "aws" {
   alias = "default"
 }
 provider "aws" {
-  alias = "cross_account"
+  alias = "account"
 }
 endef
 export PROVIDER_CHOMP
