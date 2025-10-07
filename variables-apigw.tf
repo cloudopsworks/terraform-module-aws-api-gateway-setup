@@ -97,3 +97,19 @@ variable "alerts" {
   default  = {}
   nullable = false
 }
+
+variable "client_certificates" {
+  description = "(optional) Client Certificates map for the api gateway, id => description"
+  type        = map(string)
+  default     = {}
+}
+
+variable "api_keys" {
+  description = "(optional) API Keys map for the api gateway, id => { description = string, enabled = bool, value = string }"
+  type = map(object({
+    description = string
+    enabled     = optional(bool, true)
+    value       = optional(string, null)
+  }))
+  default = {}
+}
