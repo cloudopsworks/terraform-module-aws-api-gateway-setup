@@ -15,7 +15,7 @@
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.2.8 |
+| <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.2.10 |
 | <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
 
 ## Resources
@@ -23,6 +23,8 @@
 | Name | Type |
 |------|------|
 | [aws_api_gateway_account.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_account) | resource |
+| [aws_api_gateway_api_key.api_keys](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_api_key) | resource |
+| [aws_api_gateway_client_certificate.client](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_client_certificate) | resource |
 | [aws_api_gateway_domain_name.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_domain_name) | resource |
 | [aws_api_gateway_vpc_link.vpc_link](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_vpc_link) | resource |
 | [aws_apigatewayv2_domain_name.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_domain_name) | resource |
@@ -43,7 +45,9 @@
 |------|-------------|------|---------|:--------:|
 | <a name="input_acm_certificate_arn"></a> [acm\_certificate\_arn](#input\_acm\_certificate\_arn) | ACM Certificate ARN to use for the API Gateway Domain Names | `string` | `""` | no |
 | <a name="input_alerts"></a> [alerts](#input\_alerts) | Enable alerts for API Gateway | <pre>object({<br/>    enabled       = optional(bool, false)<br/>    priority      = optional(number, 3)<br/>    sns_topic_arn = optional(string, "")<br/>  })</pre> | `{}` | no |
+| <a name="input_api_keys"></a> [api\_keys](#input\_api\_keys) | (optional) API Keys map for the api gateway, id => { description = string, enabled = bool, value = string } | <pre>map(object({<br/>    description = string<br/>    enabled     = optional(bool, true)<br/>    value       = optional(string, null)<br/>  }))</pre> | `{}` | no |
 | <a name="input_apigw_domains"></a> [apigw\_domains](#input\_apigw\_domains) | List of API Gateway Domain Names to create | <pre>list(object({<br/>    domain_name         = string<br/>    version             = optional(number, 1)       # Default version is 1 if not specified<br/>    acm_certificate_arn = optional(string, "")      # Optional ACM Certificate ARN<br/>    endpoint_type       = optional(string, "")      # Default endpoint type is null, which will use the default from the variable<br/>    security_policy     = optional(string, "")      # Default security policy is null, which will use the default from the variable<br/>    ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4<br/>    mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration<br/>  }))</pre> | `[]` | no |
+| <a name="input_client_certificates"></a> [client\_certificates](#input\_client\_certificates) | (optional) Client Certificates map for the api gateway, id => description | `map(string)` | `{}` | no |
 | <a name="input_cloudwatch_role_enabled"></a> [cloudwatch\_role\_enabled](#input\_cloudwatch\_role\_enabled) | Enable CloudWatch Role for API Gateway Account | `bool` | `true` | no |
 | <a name="input_cross_account_acm"></a> [cross\_account\_acm](#input\_cross\_account\_acm) | The cross account to use for the Certificate domain, aws.cross\_account provider must be set to module. | `bool` | `false` | no |
 | <a name="input_domain_zone"></a> [domain\_zone](#input\_domain\_zone) | The domain zone to create the domain names in | `string` | n/a | yes |
@@ -68,3 +72,4 @@
 | <a name="output_apigw_rest_vpc_link_id"></a> [apigw\_rest\_vpc\_link\_id](#output\_apigw\_rest\_vpc\_link\_id) | n/a |
 | <a name="output_apigw_rest_vpc_link_name"></a> [apigw\_rest\_vpc\_link\_name](#output\_apigw\_rest\_vpc\_link\_name) | n/a |
 | <a name="output_apigw_role_arn"></a> [apigw\_role\_arn](#output\_apigw\_role\_arn) | n/a |
+| <a name="output_client_certificates"></a> [client\_certificates](#output\_client\_certificates) | n/a |
