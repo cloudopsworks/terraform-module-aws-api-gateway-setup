@@ -47,3 +47,14 @@ output "apigw_http_vpc_link_name" {
 output "apigw_http_vpc_link_id" {
   value = length(var.http_vpc_link) > 0 ? aws_apigatewayv2_vpc_link.vpc_link[0].id : null
 }
+
+output "client_certificates" {
+  value = {
+    for key, value in var.client_certificates : key => {
+      arn             = aws_api_gateway_client_certificate.client[key].arn
+      created_date    = aws_api_gateway_client_certificate.client[key].created_date
+      expiration_date = aws_api_gateway_client_certificate.client[key].expiration_date
+      pem             = aws_api_gateway_client_certificate.client[key].pem_encoded_certificate
+    }
+  }
+}
