@@ -1,18 +1,55 @@
 # Module configuration
-# Required variables
-{{- range .requiredVariables }}
-{{- if ne .Name "org"}}
-# Description {{ .Description }} , Type: {{ .Type }}
-{{ .Name }}: {{ .DefaultValuePlaceholder }}
-{{- end }}
+# AWS API Gateway setup deployment inputs
 
-{{- end }}
-# Optional variables
-{{- range .optionalVariables }}
-{{- if ne .Name "is_hub" "spoke_def" "extra_args" }}
-# Description {{ .Description }} , Type: {{ .Type }}
-#{{ .Name }}: {{ .DefaultValue }}
-{{- end }}
+#name_prefix: "edge"            # (Optional) Prefix added to generated API Gateway resource names. Default: ""
 
-{{- end }}
+domain_zone: "example.com"      # (Required) Base DNS zone appended to each apigw_domains entry. Example: "example.com"
 
+apigw_domains:
+  - domain_name: "api"          # (Required) Host label for the custom domain. Example: "api" -> "api.example.com"
+    #version: 1                 # (Optional) API Gateway custom domain version. Valid values: 1 (REST API) or 2 (HTTP API). Default: 1
+    #endpoint_type: "REGIONAL"  # (Optional) Per-domain endpoint type override. Valid values: "REGIONAL", "EDGE". Defaults to the module-level endpoint_config_types or its first entry.
+    #security_policy: "TLS_1_2" # (Optional) Per-domain TLS policy override. Valid values: "TLS_1_0", "TLS_1_2". Defaults to module-level security_policy when empty.
+    #acm_certificate_arn: ""    # (Optional) Per-domain ACM certificate ARN. Leave empty to use acm_certificate_arn or the ACM dependency special case. Default: ""
+    #ip_address_type: "ipv4"    # (Optional) HTTP API IP address type. Valid values: "ipv4", "dualstack". Default: "ipv4"
+    #mutual_tls:                # (Optional) Mutual TLS settings for HTTP API domains (version = 2). Default: {}
+    #  truststore_uri: "s3://shared-bucket/truststores/api.pem" # (Required when mutual_tls is set) S3 URI containing the trust store bundle.
+    #  truststore_version: "1"  # (Optional) Object version for the trust store file. Default: provider/AWS default
+
+#acm_certificate_arn: ""        # (Optional) Shared ACM certificate ARN for domains without a per-domain certificate. Leave empty to let the module ACM helper create one when needed. Default: ""
+#endpoint_config_types:         # (Optional) Default REST API endpoint types. Valid values: "REGIONAL", "EDGE". Default: ["REGIONAL"]
+#  - "REGIONAL"
+#security_policy: "TLS_1_2"     # (Optional) Default TLS policy applied when a domain override is not set. Valid values: "TLS_1_0", "TLS_1_2". Default: "TLS_1_2"
+#rest_vpc_link_arn: ""          # (Optional) Existing REST API VPC Link ARN used by downstream API Gateway integrations. Default: ""
+#http_vpc_link:                 # (Optional) HTTP API VPC Link definition passed through to the module. Default: {}
+#  name: "http-vpc-link"        # (Optional) Friendly name for the VPC Link. Example: "http-vpc-link"
+#  subnet_ids:                  # (Optional) Subnet IDs for the VPC Link ENIs. Example values shown below.
+#    - "subnet-0123456789abcdef0"
+#    - "subnet-0fedcba9876543210"
+#  security_group_ids:          # (Optional) Security groups attached to the VPC Link ENIs.
+#    - "sg-0123456789abcdef0"
+#  vpc_id: "vpc-0123456789abcdef0" # (Optional) VPC that owns the subnets/security groups.
+#cloudwatch_role_enabled: true  # (Optional) Create the API Gateway account CloudWatch logging role. Default: true
+#cross_account_acm: false       # (Optional) Enable cross-account ACM/Route53 handling for the helper certificate module. Requires the cross_account special-case object below. Default: false
+#alerts:                        # (Optional) Alert metadata forwarded to the ACM helper module. Default: {}
+#  enabled: false               # (Optional) Enable alert metadata emission. Default: false
+#  priority: 3                  # (Optional) Alert priority/severity. Default: 3
+#  sns_topic_arn: ""            # (Optional) SNS topic ARN used by your monitoring workflow. Default: ""
+#client_certificates:           # (Optional) API Gateway client certificates keyed by identifier. Default: {}
+#  partner-a: "Legacy partner certificate"
+#api_keys:                      # (Optional) API keys keyed by identifier. Default: {}
+#  default:                     # (Required when declaring a key) Unique API key entry name.
+#    description: "Default API key for downstream usage plans" # (Required) Human-friendly API key description.
+#    #enabled: true             # (Optional) Set to false to create the key disabled. Default: true
+#    #value: ""                 # (Optional) Explicit API key value. Leave unset to let AWS generate it. Default: null/provider-generated
+
+# Special case: scaffold an ACM dependency and source acm_certificate_arn from it instead of inputs.yaml.
+#acm_enabled: false             # (Optional) When true, terragrunt.hcl renders dependency "acm" and injects dependency.acm.outputs.acm_certificate_arn. Default: false
+#acm_path: "../acm"             # (Optional) Relative Terragrunt path to the ACM module used when acm_enabled = true. Default: "../acm"
+
+# Special case: cross-account provider settings used by terragrunt.hcl when cross_account_acm = true.
+#cross_account:
+#  enabled: false               # (Optional) Generate and use cross-account provider settings. Default: false
+#  alias: "cross_account"       # (Optional) AWS provider alias emitted into provider.l.tf. Default: "cross_account"
+#  region: "us-east-1"          # (Optional) Region for the generated cross-account provider. Defaults to global-inputs.yaml default.region.
+#  sts_role_arn: "arn:aws:iam::111122223333:role/TerragruntCrossAccountRole" # (Optional) Role assumed for cross-account Route53/ACM operations.
