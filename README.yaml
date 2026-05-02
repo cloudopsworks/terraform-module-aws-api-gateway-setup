@@ -1,6 +1,14 @@
 name: Terraform API Gateway Basic setup
 #logo: logo/logo.jpg
 
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudopsworks/terraform-module-aws-api-gateway-setup.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-aws-api-gateway-setup/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-aws-api-gateway-setup.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-aws-api-gateway-setup/commits
+
 license: "APACHE2"
 
 copyrights:
@@ -11,392 +19,283 @@ copyrights:
 github_repo: cloudopsworks/terraform-module-aws-api-gateway-setup
 
 description: |-
-  Terraform module for AWS API Gateway that provides a comprehensive setup for both REST API (v1) and HTTP API (v2) with enterprise-grade features and security configurations. Key features include:
+  AWS API Gateway Terraform module focused on custom domain setup and supporting
+  account resources for REST API (v1) and HTTP API (v2) deployments. It handles
+  API Gateway domain names, optional ACM certificate bootstrapping, optional client
+  certificates and API keys, CloudWatch account logging setup, and VPC Link-related
+  inputs used by downstream API Gateway stacks.
 
-  API Types and Endpoints:
-  - REST API (v1) with regional and edge-optimized endpoints
-  - HTTP API (v2) for enhanced performance and cost optimization
-  - Multiple domain configurations per API Gateway instance
-  - Custom domain management with automated DNS configuration
-
-  Security Features:
-  - Mutual TLS (mTLS) authentication support
-  - TLS 1.2 security policy enforcement
-  - VPC Link integration for private endpoints
-  - Cross-account certificate management
-  - ACM certificate integration
-
-  Infrastructure Features:
-  - Automated CloudWatch logging setup
-  - Regional and edge endpoint optimization
-  - IPv4 and dual-stack support
-  - Multiple domain configurations
-  - VPC Link integration for private APIs
-  - Load balancer integration support
-  - Custom domain management
-  - Cross-account capabilities
-
-  Monitoring and Management:
-  - CloudWatch logging integration
-  - Automated IAM role configuration
-  - Comprehensive tagging system
-  - Alert configuration support
-
-# Introduction to the project
 introduction: |-
-  This Terraform module provides a comprehensive setup for AWS API Gateway with advanced configurations and security features. It offers:
+  This module is designed for Terragrunt-driven platform stacks that need a reusable
+  way to standardize API Gateway domain configuration:
 
-  API Gateway Support:
-  - REST API (v1) with regional and edge-optimized endpoints
-  - HTTP API (v2) with enhanced performance and lower latency
-  - Multiple domain configurations per API Gateway instance
+  - **REST API (v1) and HTTP API (v2) custom domains** in one module interface.
+  - **Per-domain or shared ACM certificate selection**, with an optional ACM helper
+    dependency for modules that want Terragrunt to wire in the certificate ARN.
+  - **Cross-account certificate/DNS support** through a generated `aws.cross_account`
+    provider alias when certificate validation must happen in another account.
+  - **Mutual TLS for HTTP APIs** through per-domain trust store configuration.
+  - **CloudWatch account logging enablement**, API Gateway client certificates, and
+    API key creation for stacks that need these supporting resources.
+  - **Scaffold-friendly deployment assets** via `.boilerplate/terragrunt.hcl`,
+    `.boilerplate/inputs.yaml`, and `.boilerplate/local-tags.json`.
 
-  Security Features:
-  - Custom domain names with TLS 1.2 security policies
-  - Mutual TLS (mTLS) authentication support for HTTP APIs
-  - ACM certificate integration with cross-account support
-  - VPC Link integration for secure private network access
-
-  Infrastructure Management:
-  - Automated CloudWatch logging role configuration
-  - IAM role and policy management for API Gateway services
-  - Flexible endpoint configuration (REGIONAL/EDGE)
-  - IPv4 and dual-stack IP address support
-  - Comprehensive resource tagging system
-
-  Integration Capabilities:
-  - VPC Link setup for REST API private integrations
-  - HTTP API VPC Link with security group and subnet configuration
-  - Cross-account certificate management
-  - Multiple domain and subdomain management
-
-# How to use this project
 usage: |-
-  To use this module, include it in your Terraform configuration with the required variables:
+  ### Terragrunt Scaffolding Workflow
 
-  ```hcl
-  module "api_gateway" {
-    source = "cloudopsworks/api-gateway-setup/aws"
-  
-    # General Configuration
-    name_prefix  = "myapi"        # Prefix for resource names
-    system_name = "production"    # System identifier
-    domain_zone = "example.com"   # Base domain for API endpoints
+  Use Terragrunt scaffold to bootstrap a deployment directory from this module's
+  `.boilerplate/` template.
 
-    # Domain Configurations
-    apigw_domains = [
-      # REST API (v1) Configuration
-      {
-        domain_name         = "api"          # Subdomain name: api.example.com
-        version            = 1              # REST API version
-        endpoint_type      = "REGIONAL"     # REGIONAL or EDGE
-        security_policy    = "TLS_1_2"     # TLS security policy
-        acm_certificate_arn = null         # Optional specific certificate
-        ip_address_type    = "IPV4"       # IPv4 or DUAL
-      },
-      # HTTP API (v2) Configuration with mTLS
-      {
-        domain_name         = "dev-api"     # Subdomain name: dev-api.example.com
-        version            = 2              # HTTP API version
-        endpoint_type      = "REGIONAL"     # REGIONAL endpoint type
-        security_policy    = "TLS_1_2"     # TLS security policy
-        acm_certificate_arn = null         # Use default certificate
-        ip_address_type    = "IPV4"       # IPv4 address type
-        mutual_tls         = {
-          truststore_uri     = "s3://bucket-name/key"  # S3 URI for truststore
-          truststore_version = "1.0"                   # Truststore version
-        }
-      }
-    ]
+  ```sh
+  # 1. Create and enter the target deployment directory
+  mkdir -p <environment>/<region>/<spoke>/api-gateway-setup
+  cd <environment>/<region>/<spoke>/api-gateway-setup
 
-    # SSL/TLS Configuration
-    acm_certificate_arn    = "arn:aws:acm:region:account:certificate/xxx"
+  # 2. Scaffold the module (do NOT use --working-dir)
+  terragrunt scaffold github.com/cloudopsworks/terraform-module-aws-api-gateway-setup
 
-    # Logging Configuration
-    cloudwatch_role_enabled = true     # Enable CloudWatch logging
+  # 3. Edit inputs.yaml with deployment-specific values
+  vi inputs.yaml
 
-    # Endpoint Configuration
-    endpoint_config_types   = ["REGIONAL"]  # REGIONAL or EDGE
-
-    # VPC Link Configuration (REST API)
-    rest_vpc_link_arn      = "arn:aws:elasticloadbalancing:region:account:loadbalancer/net/name/id"
-
-    # VPC Link Configuration (HTTP API)
-    http_vpc_link = {
-      name               = "http-vpc-link"
-      subnet_ids         = ["subnet-xxx", "subnet-yyy"]
-      security_group_ids = ["sg-xxx"]
-    }
-
-    # Optional Cross-Account Configuration
-    cross_account = false    # Enable cross-account certificate management
-  }
+  # 4. Apply
+  terragrunt apply
   ```
 
-  Variable Definitions:
+  ### Generated `inputs.yaml`
+
+  After scaffolding, Terragrunt generates an `inputs.yaml` file with the module-specific
+  inputs below, including the documented ACM and cross-account special cases:
 
   ```yaml
-  name_prefix:
-    description: Prefix for resource names
-    type: string
-    required: true
+  #name_prefix: "edge"            # (Optional) Prefix added to generated API Gateway resource names. Default: ""
 
-  system_name:
-    description: System identifier for tagging
-    type: string
-    required: true
-
-  domain_zone:
-    description: Base domain for API endpoints
-    type: string
-    required: true
+  domain_zone: "example.com"      # (Required) Base DNS zone appended to each apigw_domains entry. Example: "example.com"
 
   apigw_domains:
-    description: List of API Gateway domain configurations
-    type: list(object)
-    required: true
-    properties:
-      domain_name:
-        description: Subdomain name
-        type: string
-        required: true
-      version:
-        description: API version (1 for REST, 2 for HTTP)
-        type: number
-        default: 1
-      endpoint_type:
-        description: REGIONAL or EDGE
-        type: string
-        default: REGIONAL
-      security_policy:
-        description: TLS version
-        type: string
-        default: TLS_1_2
-      acm_certificate_arn:
-        description: Specific ACM certificate ARN
-        type: string
-        optional: true
-      ip_address_type:
-        description: IPv4 or DUAL
-        type: string
-        default: IPV4
-      mutual_tls:
-        description: mTLS configuration
-        type: map
-        optional: true
-        properties:
-          truststore_uri:
-            description: S3 URI for truststore
-            type: string
-          truststore_version:
-            description: Truststore version
-            type: string
+    - domain_name: "api"          # (Required) Host label for the custom domain. Example: "api" -> "api.example.com"
+      #version: 1                 # (Optional) API Gateway custom domain version. Valid values: 1 (REST API) or 2 (HTTP API). Default: 1
+      #endpoint_type: "REGIONAL"  # (Optional) Per-domain endpoint type override. Valid values: "REGIONAL", "EDGE". Defaults to the module-level endpoint_config_types or its first entry.
+      #security_policy: "TLS_1_2" # (Optional) Per-domain TLS policy override. Valid values: "TLS_1_0", "TLS_1_2". Defaults to module-level security_policy when empty.
+      #acm_certificate_arn: ""    # (Optional) Per-domain ACM certificate ARN. Leave empty to use acm_certificate_arn or the ACM dependency special case. Default: ""
+      #ip_address_type: "ipv4"    # (Optional) HTTP API IP address type. Valid values: "ipv4", "dualstack". Default: "ipv4"
+      #mutual_tls:                # (Optional) Mutual TLS settings for HTTP API domains (version = 2). Default: {}
+      #  truststore_uri: "s3://shared-bucket/truststores/api.pem" # (Required when mutual_tls is set) S3 URI containing the trust store bundle.
+      #  truststore_version: "1"  # (Optional) Object version for the trust store file. Default: provider/AWS default
 
-  acm_certificate_arn:
-    description: Default ACM certificate ARN
-    type: string
-    required: true
+  #acm_certificate_arn: ""        # (Optional) Shared ACM certificate ARN for domains without a per-domain certificate. Leave empty to let the module ACM helper create one when needed. Default: ""
+  #endpoint_config_types:         # (Optional) Default REST API endpoint types. Valid values: "REGIONAL", "EDGE". Default: ["REGIONAL"]
+  #  - "REGIONAL"
+  #security_policy: "TLS_1_2"     # (Optional) Default TLS policy applied when a domain override is not set. Valid values: "TLS_1_0", "TLS_1_2". Default: "TLS_1_2"
+  #rest_vpc_link_arn: ""          # (Optional) Existing REST API VPC Link ARN used by downstream API Gateway integrations. Default: ""
+  #http_vpc_link:                 # (Optional) HTTP API VPC Link definition passed through to the module. Default: {}
+  #  name: "http-vpc-link"        # (Optional) Friendly name for the VPC Link. Example: "http-vpc-link"
+  #  subnet_ids:
+  #    - "subnet-0123456789abcdef0"
+  #    - "subnet-0fedcba9876543210"
+  #  security_group_ids:
+  #    - "sg-0123456789abcdef0"
+  #  vpc_id: "vpc-0123456789abcdef0" # (Optional) VPC that owns the subnets/security groups.
+  #cloudwatch_role_enabled: true  # (Optional) Create the API Gateway account CloudWatch logging role. Default: true
+  #cross_account_acm: false       # (Optional) Enable cross-account ACM/Route53 handling for the helper certificate module. Requires the cross_account special-case object below. Default: false
+  #alerts:
+  #  enabled: false               # (Optional) Enable alert metadata emission. Default: false
+  #  priority: 3                  # (Optional) Alert priority/severity. Default: 3
+  #  sns_topic_arn: ""            # (Optional) SNS topic ARN used by your monitoring workflow. Default: ""
+  #client_certificates:
+  #  partner-a: "Legacy partner certificate"
+  #api_keys:
+  #  default:
+  #    description: "Default API key for downstream usage plans" # (Required) Human-friendly API key description.
+  #    #enabled: true             # (Optional) Set to false to create the key disabled. Default: true
+  #    #value: ""                 # (Optional) Explicit API key value. Leave unset to let AWS generate it. Default: null/provider-generated
 
-  cloudwatch_role_enabled:
-    description: Enable CloudWatch logging
-    type: bool
-    default: true
+  # Special case: scaffold an ACM dependency and source acm_certificate_arn from it instead of inputs.yaml.
+  #acm_enabled: false             # (Optional) When true, terragrunt.hcl renders dependency "acm" and injects dependency.acm.outputs.acm_certificate_arn. Default: false
+  #acm_path: "../acm"             # (Optional) Relative Terragrunt path to the ACM module used when acm_enabled = true. Default: "../acm"
 
-  endpoint_config_types:
-    description: List of endpoint types
-    type: list(string)
-    default: ["REGIONAL"]
-
-  rest_vpc_link_arn:
-    description: VPC Link ARN for REST API
-    type: string
-    optional: true
-
-  http_vpc_link:
-    description: VPC Link configuration for HTTP API
-    type: map
-    optional: true
-    properties:
-      name:
-        description: VPC Link name
-        type: string
-      subnet_ids:
-        description: List of subnet IDs
-        type: list(string)
-      security_group_ids:
-        description: List of security group IDs
-        type: list(string)
-
-  cross_account:
-    description: Enable cross-account certificate management
-    type: bool
-    default: false
+  # Special case: cross-account provider settings used by terragrunt.hcl when cross_account_acm = true.
+  #cross_account:
+  #  enabled: false               # (Optional) Generate and use cross-account provider settings. Default: false
+  #  alias: "cross_account"       # (Optional) AWS provider alias emitted into provider.l.tf. Default: "cross_account"
+  #  region: "us-east-1"          # (Optional) Region for the generated cross-account provider. Defaults to global-inputs.yaml default.region.
+  #  sts_role_arn: "arn:aws:iam::111122223333:role/TerragruntCrossAccountRole" # (Optional) Role assumed for cross-account Route53/ACM operations.
   ```
 
-# Example usage
-examples: |-
-  Terragrunt implementation examples:
+  ### Generated `terragrunt.hcl`
 
-  Basic setup with REST API (v1):
+  When you scaffold with the ACM helper special case enabled (`acm_enabled = true`),
+  the generated `terragrunt.hcl` looks like this:
+
   ```hcl
-  include "root" {
-    path = find_in_parent_folders()
-  }
+  locals {
+    local_vars  = yamldecode(file("./inputs.yaml"))
+    spoke_vars  = yamldecode(file(find_in_parent_folders("spoke-inputs.yaml")))
+    region_vars = yamldecode(file(find_in_parent_folders("region-inputs.yaml")))
+    env_vars    = yamldecode(file(find_in_parent_folders("env-inputs.yaml")))
+    global_vars = yamldecode(file(find_in_parent_folders("global-inputs.yaml")))
 
-  terraform {
-    source = "cloudopsworks/api-gateway-setup/aws"
+    local_tags  = jsondecode(file("./local-tags.json"))
+    spoke_tags  = jsondecode(file(find_in_parent_folders("spoke-tags.json")))
+    region_tags = jsondecode(file(find_in_parent_folders("region-tags.json")))
+    env_tags    = jsondecode(file(find_in_parent_folders("env-tags.json")))
+    global_tags = jsondecode(file(find_in_parent_folders("global-tags.json")))
+
+    cross_account              = try(local.local_vars.cross_account.enabled, false)
+    cross_account_alias        = try(local.local_vars.cross_account.alias, "cross_account")
+    cross_account_region       = try(local.local_vars.cross_account.region, local.global_vars.default.region)
+    cross_account_sts_role_arn = try(local.local_vars.cross_account.sts_role_arn, local.global_vars.default.sts_role_arn)
+
+    tags = merge(
+      local.global_tags,
+      local.env_tags,
+      local.region_tags,
+      local.spoke_tags,
+      local.local_tags
+    )
   }
 
   dependency "acm" {
-    config_path = "../acm"
+    config_path                             = "../acm"
+    mock_outputs_allowed_terraform_commands = ["validate", "destroy"]
+    mock_outputs = {
+      acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+    }
   }
 
-  dependency "nlb" {
-    config_path = "../nlb"
-  }
-  
-  # Generate global cross_account provider block
   generate "provider_l" {
-    path = "provider.l.tf"
-    #   disable     = !local.cross_account
+    path        = "provider.l.tf"
     if_exists   = "overwrite_terragrunt"
     if_disabled = "remove_terragrunt"
-    contents    = <<EOF
-    provider "aws" {
-      alias = "${local.cross_account_alias}"
-      region = "${local.cross_account_region}"
-      assume_role {
-        role_arn     = "${local.cross_account_sts_role_arn}"
-        session_name = "terragrunt"
-      }
-    }
-    EOF
-  }
+    contents    = <<EOF_PROVIDER
+  provider "aws" {
+    alias  = "${local.cross_account_alias}"
+    region = "${local.cross_account_region}"
 
-  inputs = {
-    name_prefix           = "customer"
-    system_name          = "staging"
-    domain_zone          = "api.example.com"
-    apigw_domains        = [
-      {
-        domain_name         = "v1"
-        version            = 1
-        endpoint_type      = "REGIONAL"
-        security_policy    = "TLS_1_2"
-        acm_certificate_arn = null
-      }
-    ]
-    acm_certificate_arn    = dependency.acm.outputs.certificate_arn
-    cloudwatch_role_enabled = true
-    endpoint_config_types   = ["REGIONAL"]
-    rest_vpc_link_arn      = dependency.nlb.outputs.lb_arn
-    tags = {
-      Environment = "staging"
-      Project     = "customer-api"
+    assume_role {
+      role_arn     = "${local.cross_account_sts_role_arn}"
+      session_name = "terragrunt"
     }
   }
-  ```
+  EOF_PROVIDER
+  }
 
-  HTTP API (v2) with mutual TLS:
-  ```hcl
   include "root" {
-    path = find_in_parent_folders()
+    path = find_in_parent_folders("root.hcl")
   }
 
   terraform {
-    source = "cloudopsworks/api-gateway-setup/aws"
-  }
-
-  dependency "acm" {
-    config_path = "../acm"
+    source = "git::https://github.com/cloudopsworks/terraform-module-aws-api-gateway-setup.git?ref=v1.6.27"
   }
 
   inputs = {
-    name_prefix           = "customer"
-    system_name          = "staging"
-    domain_zone          = "api.example.com"
-    apigw_domains        = [
-      {
-        domain_name         = "v2"
-        version            = 2
-        endpoint_type      = "REGIONAL"
-        security_policy    = "TLS_1_2"
-        acm_certificate_arn = null
-        ip_address_type    = "IPV4"
-        mutual_tls         = {
-          truststore_uri     = "s3://bucket-name/key"
-          truststore_version = "1.0"
-        }
-      }
-    ]
-    acm_certificate_arn    = dependency.acm.outputs.certificate_arn
-    cloudwatch_role_enabled = true
-    endpoint_config_types   = ["REGIONAL"]
-    http_vpc_link         = [{
-      name               = "http-vpc-link"
-      subnet_ids         = dependency.vpc.outputs.private_subnets
-      security_group_ids = [dependency.sg.outputs.security_group_id]
-    }]
-    tags = {
-      Environment = "staging"
-      Project     = "customer-api"
-    }
+    is_hub    = false
+    org       = local.env_vars.org
+    spoke_def = local.spoke_vars.spoke_def
+
+    domain_zone             = local.local_vars.domain_zone
+    apigw_domains           = local.local_vars.apigw_domains
+    name_prefix             = try(local.local_vars.name_prefix, "")
+    acm_certificate_arn     = dependency.acm.outputs.acm_certificate_arn
+    endpoint_config_types   = try(local.local_vars.endpoint_config_types, ["REGIONAL"])
+    security_policy         = try(local.local_vars.security_policy, "TLS_1_2")
+    rest_vpc_link_arn       = try(local.local_vars.rest_vpc_link_arn, "")
+    http_vpc_link           = try(local.local_vars.http_vpc_link, {})
+    cloudwatch_role_enabled = try(local.local_vars.cloudwatch_role_enabled, true)
+    cross_account_acm       = try(local.local_vars.cross_account_acm, false)
+    alerts                  = try(local.local_vars.alerts, {})
+    client_certificates     = try(local.local_vars.client_certificates, {})
+    api_keys                = try(local.local_vars.api_keys, {})
+    extra_tags              = local.tags
   }
   ```
 
-# How to get started quickly
+  If you leave `acm_enabled = false`, the `dependency "acm"` block is omitted and the
+  scaffold keeps `acm_certificate_arn = try(local.local_vars.acm_certificate_arn, "")`.
+
+examples: |-
+  ### REST API custom domains with an ACM dependency
+
+  ```yaml
+  domain_zone: "example.com"
+  apigw_domains:
+    - domain_name: "api"
+      version: 1
+      endpoint_type: "REGIONAL"
+    - domain_name: "edge"
+      version: 1
+      endpoint_type: "EDGE"
+  endpoint_config_types:
+    - "REGIONAL"
+  acm_enabled: true
+  acm_path: "../acm"
+  ```
+
+  ### HTTP API custom domain with mutual TLS
+
+  ```yaml
+  domain_zone: "example.com"
+  apigw_domains:
+    - domain_name: "private-api"
+      version: 2
+      endpoint_type: "REGIONAL"
+      ip_address_type: "dualstack"
+      mutual_tls:
+        truststore_uri: "s3://shared-bucket/truststores/private-api.pem"
+        truststore_version: "3"
+  acm_certificate_arn: "arn:aws:acm:us-east-1:111122223333:certificate/12345678-1234-1234-1234-123456789012"
+  http_vpc_link:
+    name: "private-http-link"
+    subnet_ids:
+      - "subnet-0123456789abcdef0"
+      - "subnet-0fedcba9876543210"
+    security_group_ids:
+      - "sg-0123456789abcdef0"
+  ```
+
+  ### Cross-account ACM helper
+
+  ```yaml
+  domain_zone: "example.com"
+  apigw_domains:
+    - domain_name: "shared"
+      version: 1
+  cross_account_acm: true
+  acm_enabled: true
+  cross_account:
+    enabled: true
+    alias: "dns_account"
+    region: "us-east-1"
+    sts_role_arn: "arn:aws:iam::111122223333:role/TerragruntCrossAccountRole"
+  ```
+
 quickstart: |-
-  1. Add the module to your Terraform configuration:
-     ```hcl
-     module "api_gateway" {
-       source  = "cloudopsworks/api-gateway-setup/aws"
-       version = "1.0.0"
-     }
+  1. Create a deployment directory and scaffold the module:
+     ```sh
+     mkdir -p prod/us-east-1/spoke-001/api-gateway-setup
+     cd prod/us-east-1/spoke-001/api-gateway-setup
+     terragrunt scaffold github.com/cloudopsworks/terraform-module-aws-api-gateway-setup
      ```
 
-  2. Configure required variables:
-     - name_prefix: Prefix for resource names (e.g., "myapi")
-     - system_name: System identifier (e.g., "production")
-     - domain_zone: Base domain for API endpoints (e.g., "api.example.com")
-     - apigw_domains: List of domain configurations with:
-       - domain_name: Subdomain name
-       - version: API Gateway version (1 for REST, 2 for HTTP)
-       - endpoint_type: REGIONAL or EDGE
-       - security_policy: TLS version
-       - acm_certificate_arn: Optional certificate ARN
-       - ip_address_type: IPV4 or DUAL
-       - mutual_tls: Optional mTLS configuration
-     - acm_certificate_arn: Default SSL certificate ARN
-     - cloudwatch_role_enabled: Enable CloudWatch logging
-     - endpoint_config_types: List of endpoint types
-     - rest_vpc_link_arn: Optional VPC Link for REST API
-     - http_vpc_link: Optional VPC Link for HTTP API
+  2. Edit `inputs.yaml`:
+     - Set `domain_zone`
+     - Define at least one `apigw_domains` entry
+     - Choose either `acm_certificate_arn`, per-domain `acm_certificate_arn`, or the `acm_enabled` special case
+     - Set `cross_account_acm` and the `cross_account` object only when certificate validation must cross AWS accounts
 
-  3. For Terragrunt setup:
-     - Create terragrunt.hcl in your module directory
-     - Configure dependencies for ACM, VPC, etc.
-     - Set environment-specific variables
-
-  4. Initialize and apply:
-     ```bash
-     # For Terraform
-     terraform init
-     terraform plan
-     terraform apply
-
-     # For Terragrunt
-     terragrunt init
+  3. Review the plan:
+     ```sh
      terragrunt plan
+     ```
+
+  4. Apply the configuration:
+     ```sh
      terragrunt apply
      ```
 
-  5. Access your API endpoints using the generated domain names
-
-  6. Optional configurations:
-     - Set up mutual TLS authentication
-     - Configure VPC links for private integrations
-     - Enable CloudWatch logging
-     - Configure custom domain names
+  5. After apply:
+     - Map your API stages/integrations to the created domain names in the API-specific stack
+     - If using mTLS, confirm the S3 truststore object and version are reachable
+     - If using the ACM helper, verify the dependency path points to the intended certificate stack
 
 include:
   - "docs/targets.md"
