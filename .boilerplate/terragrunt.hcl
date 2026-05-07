@@ -73,7 +73,7 @@ terraform {
 inputs = {
   is_hub     = {{ .is_hub }}
   org        = local.env_vars.org
-  spoke_def  = local.spoke_vars.spoke_def
+  spoke_def  = local.spoke_vars.spoke
   {{- range .requiredVariables }}
   {{- if ne .Name "org" }}
   {{- if eq .Name "domain_zone"}}
