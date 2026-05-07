@@ -12,7 +12,7 @@ locals {
   global_tags = jsondecode(file(find_in_parent_folders("global-tags.json")))
 
   # Cross Account variables
-  cross_account              = try(local.local_vars.cross_account.enabled, false)
+  cross_account              = try(local.local_vars.cross_account.enabled, local.local_vars.cross_account_acm, false)
   cross_account_alias        = try(local.local_vars.cross_account.alias, "cross_account")
   cross_account_region       = try(local.local_vars.cross_account.region, local.global_vars.default.region)
   cross_account_sts_role_arn = try(local.local_vars.cross_account.sts_role_arn, local.global_vars.default.sts_role_arn)
@@ -31,6 +31,16 @@ dependency "acm" {
   mock_outputs_allowed_terraform_commands = ["validate", "destroy"]
   mock_outputs = {
     acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+  }
+}
+{{ end }}
+{{ if .vpc_link_enabled }}
+dependency "vpc_link_nlb" {
+  config_path                             = "{{ .vpc_link_path }}"
+  mock_outputs_allowed_terraform_commands = ["validate"]
+  mock_outputs = {
+    load_balancer_dns_name = "nlb-12345678901234567.elb.us-east-1.amazonaws.com"
+    load_balancer_arn      = "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/nlb-12345678901234567/12345678901234567"
   }
 }
 {{ end }}
@@ -66,17 +76,28 @@ inputs = {
   spoke_def  = local.spoke_vars.spoke_def
   {{- range .requiredVariables }}
   {{- if ne .Name "org" }}
+  {{- if eq .Name "domain_zone"}}
+  domain_zone = try(local.local_vars.api_gateway.zone, local.local_vars.domain_zone)
+  {{- else }}
   {{ .Name }} = local.local_vars.{{ .Name }}
   {{- end }}
   {{- end }}
+  {{- end }}
   {{- range .optionalVariables }}
-  {{- if not (eq .Name "extra_tags" "is_hub" "spoke_def" "org") }}
+  {{- if not (eq .Name "extra_tags" "is_hub" "spoke_def" "org" "cross_account_acm") }}
   {{- if and $.acm_enabled (eq .Name "acm_certificate_arn") }}
-  {{ .Name }} = dependency.acm.outputs.acm_certificate_arn
+  acm_certificate_arn = dependency.acm.outputs.acm_certificate_arn
+  {{- else if eq .Name "rest_vpc_link_arn" }}
+  rest_vpc_link_arn = {{ if $.vpc_link_enabled }}dependency.vpc_link_nlb.outputs.load_balancer_arn{{ else }}try(local.local_vars.api_gateway.rest_vpc_link_arn, local.local_vars.rest_vpc_link_arn, {{ .DefaultValue }}){{ end }}
+  {{- else if eq .Name "apigw_domains" }}
+  apigw_domains = try(local.local_vars.api_gateway.domains, local.local_vars.apigw_domains, [])
+  {{- else if eq .Name "http_vpc_link" }}
+  http_vpc_link = try(local.local_vars.api_gateway.http_vpc_link, local.local_vars.http_vpc_link, {{ .DefaultValue }})
   {{- else }}
   {{ .Name }} = try(local.local_vars.{{ .Name }}, {{ .DefaultValue }})
   {{- end }}
   {{- end }}
   {{- end }}
+  cross_account_acm = local.cross_account
   extra_tags = local.tags
 }

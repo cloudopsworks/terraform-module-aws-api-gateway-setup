@@ -81,6 +81,11 @@ cd <environment>/<region>/<spoke>/api-gateway-setup
 # 2. Scaffold the module (do NOT use --working-dir)
 terragrunt scaffold github.com/cloudopsworks/terraform-module-aws-api-gateway-setup
 
+# Optional: render scaffold-time dependency blocks when needed
+# terragrunt scaffold --var acm_enabled=true --var acm_path=../acm \
+#   --var vpc_link_enabled=true --var vpc_link_path=../vpc-link \
+#   github.com/cloudopsworks/terraform-module-aws-api-gateway-setup
+
 # 3. Edit inputs.yaml with deployment-specific values
 vi inputs.yaml
 
@@ -91,9 +96,12 @@ terragrunt apply
 ### Generated `inputs.yaml`
 
 After scaffolding, Terragrunt generates an `inputs.yaml` file with the module-specific
-inputs below, including the documented ACM and cross-account special cases:
+inputs below, including the documented ACM, VPC Link, grouped `api_gateway`, and cross-account special cases:
 
 ```yaml
+# Module configuration
+# AWS API Gateway setup deployment inputs
+
 #name_prefix: "edge"            # (Optional) Prefix added to generated API Gateway resource names. Default: ""
 
 domain_zone: "example.com"      # (Required) Base DNS zone appended to each apigw_domains entry. Example: "example.com"
@@ -109,36 +117,48 @@ apigw_domains:
     #  truststore_uri: "s3://shared-bucket/truststores/api.pem" # (Required when mutual_tls is set) S3 URI containing the trust store bundle.
     #  truststore_version: "1"  # (Optional) Object version for the trust store file. Default: provider/AWS default
 
+#api_gateway:                   # (Optional) Grouped input layout supported by terragrunt.hcl for API Gateway-specific values. Top-level keys above remain supported.
+#  zone: "example.com"          # (Optional) Alternative source for domain_zone. Default: domain_zone
+#  domains:                     # (Optional) Alternative source for apigw_domains. Default: apigw_domains
+#    - domain_name: "api"       # (Required when declaring a domain) Same structure as apigw_domains entries above.
+#      version: 1               # (Optional) API Gateway custom domain version. Valid values: 1 or 2. Default: 1
+#  rest_vpc_link_arn: ""        # (Optional) Alternative source for rest_vpc_link_arn. Default: rest_vpc_link_arn
+#  http_vpc_link: {}            # (Optional) Alternative source for http_vpc_link. Default: http_vpc_link
+
 #acm_certificate_arn: ""        # (Optional) Shared ACM certificate ARN for domains without a per-domain certificate. Leave empty to let the module ACM helper create one when needed. Default: ""
 #endpoint_config_types:         # (Optional) Default REST API endpoint types. Valid values: "REGIONAL", "EDGE". Default: ["REGIONAL"]
 #  - "REGIONAL"
 #security_policy: "TLS_1_2"     # (Optional) Default TLS policy applied when a domain override is not set. Valid values: "TLS_1_0", "TLS_1_2". Default: "TLS_1_2"
-#rest_vpc_link_arn: ""          # (Optional) Existing REST API VPC Link ARN used by downstream API Gateway integrations. Default: ""
+#rest_vpc_link_arn: ""          # (Optional) Existing NLB ARN used to create a REST API VPC Link. When vpc_link_enabled is true at scaffold time, terragrunt.hcl injects dependency.vpc_link_nlb.outputs.load_balancer_arn. Default: ""
 #http_vpc_link:                 # (Optional) HTTP API VPC Link definition passed through to the module. Default: {}
 #  name: "http-vpc-link"        # (Optional) Friendly name for the VPC Link. Example: "http-vpc-link"
-#  subnet_ids:
+#  subnet_ids:                  # (Required when http_vpc_link is set) Subnet IDs for the VPC Link ENIs.
 #    - "subnet-0123456789abcdef0"
 #    - "subnet-0fedcba9876543210"
-#  security_group_ids:
+#  security_group_ids:          # (Optional) Security groups attached to the VPC Link ENIs. Default: []
 #    - "sg-0123456789abcdef0"
-#  vpc_id: "vpc-0123456789abcdef0" # (Optional) VPC that owns the subnets/security groups.
+#  vpc_id: "vpc-0123456789abcdef0" # (Required when http_vpc_link is set) VPC that owns the subnets/security groups.
 #cloudwatch_role_enabled: true  # (Optional) Create the API Gateway account CloudWatch logging role. Default: true
-#cross_account_acm: false       # (Optional) Enable cross-account ACM/Route53 handling for the helper certificate module. Requires the cross_account special-case object below. Default: false
-#alerts:
+#cross_account_acm: false       # (Optional) Enable cross-account ACM/Route53 handling. terragrunt.hcl also derives this from cross_account.enabled when present. Default: false
+#alerts:                        # (Optional) Alert metadata forwarded to the ACM helper module. Default: {}
 #  enabled: false               # (Optional) Enable alert metadata emission. Default: false
 #  priority: 3                  # (Optional) Alert priority/severity. Default: 3
 #  sns_topic_arn: ""            # (Optional) SNS topic ARN used by your monitoring workflow. Default: ""
-#client_certificates:
+#client_certificates:           # (Optional) API Gateway client certificates keyed by identifier. Default: {}
 #  partner-a: "Legacy partner certificate"
-#api_keys:
-#  default:
+#api_keys:                      # (Optional) API keys keyed by identifier. Default: {}
+#  default:                     # (Required when declaring a key) Unique API key entry name.
 #    description: "Default API key for downstream usage plans" # (Required) Human-friendly API key description.
 #    #enabled: true             # (Optional) Set to false to create the key disabled. Default: true
 #    #value: ""                 # (Optional) Explicit API key value. Leave unset to let AWS generate it. Default: null/provider-generated
 
 # Special case: scaffold an ACM dependency and source acm_certificate_arn from it instead of inputs.yaml.
-#acm_enabled: false             # (Optional) When true, terragrunt.hcl renders dependency "acm" and injects dependency.acm.outputs.acm_certificate_arn. Default: false
-#acm_path: "../acm"             # (Optional) Relative Terragrunt path to the ACM module used when acm_enabled = true. Default: "../acm"
+#acm_enabled: false             # (Optional) Scaffold-time setting. When true, terragrunt.hcl renders dependency "acm" and injects dependency.acm.outputs.acm_certificate_arn. Default: false
+#acm_path: "../acm"             # (Optional) Scaffold-time relative Terragrunt path to the ACM module used when acm_enabled = true. Default: "../acm"
+
+# Special case: scaffold a VPC Link NLB dependency and source rest_vpc_link_arn from it instead of inputs.yaml.
+#vpc_link_enabled: false        # (Optional) Scaffold-time setting. When true, terragrunt.hcl renders dependency "vpc_link_nlb" and injects dependency.vpc_link_nlb.outputs.load_balancer_arn. Default: false
+#vpc_link_path: "../vpc-link"   # (Optional) Scaffold-time relative Terragrunt path to the NLB/VPC Link dependency used when vpc_link_enabled = true. Default: "../vpc-link"
 
 # Special case: cross-account provider settings used by terragrunt.hcl when cross_account_acm = true.
 #cross_account:
@@ -150,8 +170,9 @@ apigw_domains:
 
 ### Generated `terragrunt.hcl`
 
-When you scaffold with the ACM helper special case enabled (`acm_enabled = true`),
-the generated `terragrunt.hcl` looks like this:
+When you scaffold with the ACM helper and VPC Link dependency special cases enabled
+(`acm_enabled = true`, `vpc_link_enabled = true`), the generated `terragrunt.hcl`
+looks like this:
 
 ```hcl
 locals {
@@ -167,7 +188,8 @@ locals {
   env_tags    = jsondecode(file(find_in_parent_folders("env-tags.json")))
   global_tags = jsondecode(file(find_in_parent_folders("global-tags.json")))
 
-  cross_account              = try(local.local_vars.cross_account.enabled, false)
+  # Cross Account variables
+  cross_account              = try(local.local_vars.cross_account.enabled, local.local_vars.cross_account_acm, false)
   cross_account_alias        = try(local.local_vars.cross_account.alias, "cross_account")
   cross_account_region       = try(local.local_vars.cross_account.region, local.global_vars.default.region)
   cross_account_sts_role_arn = try(local.local_vars.cross_account.sts_role_arn, local.global_vars.default.sts_role_arn)
@@ -189,6 +211,17 @@ dependency "acm" {
   }
 }
 
+
+dependency "vpc_link_nlb" {
+  config_path                             = "../vpc-link"
+  mock_outputs_allowed_terraform_commands = ["validate"]
+  mock_outputs = {
+    load_balancer_dns_name = "nlb-12345678901234567.elb.us-east-1.amazonaws.com"
+    load_balancer_arn      = "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/nlb-12345678901234567/12345678901234567"
+  }
+}
+
+# Generate cross-account AWS provider block when the module validates Route53 records in another account.
 generate "provider_l" {
   path        = "provider.l.tf"
   if_exists   = "overwrite_terragrunt"
@@ -211,33 +244,34 @@ include "root" {
 }
 
 terraform {
-  source = "git::https://github.com/cloudopsworks/terraform-module-aws-api-gateway-setup.git?ref=v1.6.27"
+  source = "git::https://github.com/cloudopsworks/terraform-module-aws-api-gateway-setup.git?ref=v1.4.10"
 }
 
 inputs = {
-  is_hub    = false
-  org       = local.env_vars.org
-  spoke_def = local.spoke_vars.spoke_def
-
-  domain_zone             = local.local_vars.domain_zone
-  apigw_domains           = local.local_vars.apigw_domains
-  name_prefix             = try(local.local_vars.name_prefix, "")
-  acm_certificate_arn     = dependency.acm.outputs.acm_certificate_arn
-  endpoint_config_types   = try(local.local_vars.endpoint_config_types, ["REGIONAL"])
-  security_policy         = try(local.local_vars.security_policy, "TLS_1_2")
-  rest_vpc_link_arn       = try(local.local_vars.rest_vpc_link_arn, "")
-  http_vpc_link           = try(local.local_vars.http_vpc_link, {})
+  is_hub     = false
+  org        = local.env_vars.org
+  spoke_def  = local.spoke_vars.spoke_def
+  domain_zone = try(local.local_vars.api_gateway.zone, local.local_vars.domain_zone)
+  name_prefix = try(local.local_vars.name_prefix, "")
+  apigw_domains = try(local.local_vars.api_gateway.domains, local.local_vars.apigw_domains, [])
+  acm_certificate_arn = dependency.acm.outputs.acm_certificate_arn
+  endpoint_config_types = try(local.local_vars.endpoint_config_types, ["REGIONAL"])
+  security_policy = try(local.local_vars.security_policy, "TLS_1_2")
+  rest_vpc_link_arn = dependency.vpc_link_nlb.outputs.load_balancer_arn
+  http_vpc_link = try(local.local_vars.api_gateway.http_vpc_link, local.local_vars.http_vpc_link, {})
   cloudwatch_role_enabled = try(local.local_vars.cloudwatch_role_enabled, true)
-  cross_account_acm       = try(local.local_vars.cross_account_acm, false)
-  alerts                  = try(local.local_vars.alerts, {})
-  client_certificates     = try(local.local_vars.client_certificates, {})
-  api_keys                = try(local.local_vars.api_keys, {})
-  extra_tags              = local.tags
+  alerts = try(local.local_vars.alerts, {})
+  client_certificates = try(local.local_vars.client_certificates, {})
+  api_keys = try(local.local_vars.api_keys, {})
+  cross_account_acm = local.cross_account
+  extra_tags = local.tags
 }
 ```
 
 If you leave `acm_enabled = false`, the `dependency "acm"` block is omitted and the
 scaffold keeps `acm_certificate_arn = try(local.local_vars.acm_certificate_arn, "")`.
+If you leave `vpc_link_enabled = false`, the `dependency "vpc_link_nlb"` block is omitted
+and `rest_vpc_link_arn` falls back to `api_gateway.rest_vpc_link_arn` or the top-level input.
 
 ## Quick Start
 
@@ -246,6 +280,7 @@ scaffold keeps `acm_certificate_arn = try(local.local_vars.acm_certificate_arn, 
    mkdir -p prod/us-east-1/spoke-001/api-gateway-setup
    cd prod/us-east-1/spoke-001/api-gateway-setup
    terragrunt scaffold github.com/cloudopsworks/terraform-module-aws-api-gateway-setup
+   # Add --var acm_enabled=true or --var vpc_link_enabled=true here when those dependency blocks should be rendered.
    ```
 
 2. Edit `inputs.yaml`:
@@ -253,6 +288,7 @@ scaffold keeps `acm_certificate_arn = try(local.local_vars.acm_certificate_arn, 
    - Define at least one `apigw_domains` entry
    - Choose either `acm_certificate_arn`, per-domain `acm_certificate_arn`, or the `acm_enabled` special case
    - Set `cross_account_acm` and the `cross_account` object only when certificate validation must cross AWS accounts
+   - For REST API VPC Link sourced from an NLB dependency, scaffold with `--var vpc_link_enabled=true --var vpc_link_path=../shared-nlb`
 
 3. Review the plan:
    ```sh
@@ -311,6 +347,18 @@ http_vpc_link:
     - "sg-0123456789abcdef0"
 ```
 
+### REST API VPC Link sourced from an NLB dependency
+
+```yaml
+domain_zone: "example.com"
+apigw_domains:
+  - domain_name: "private"
+    version: 1
+    endpoint_type: "REGIONAL"
+vpc_link_enabled: true
+vpc_link_path: "../shared-nlb"
+```
+
 ### Cross-account ACM helper
 
 ```yaml
@@ -352,7 +400,7 @@ Available targets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.35 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.43.0 |
 
 ## Modules
 
