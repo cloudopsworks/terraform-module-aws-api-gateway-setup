@@ -16,21 +16,29 @@ apigw_domains:
     #  truststore_uri: "s3://shared-bucket/truststores/api.pem" # (Required when mutual_tls is set) S3 URI containing the trust store bundle.
     #  truststore_version: "1"  # (Optional) Object version for the trust store file. Default: provider/AWS default
 
+#api_gateway:                   # (Optional) Grouped input layout supported by terragrunt.hcl for API Gateway-specific values. Top-level keys above remain supported.
+#  zone: "example.com"          # (Optional) Alternative source for domain_zone. Default: domain_zone
+#  domains:                     # (Optional) Alternative source for apigw_domains. Default: apigw_domains
+#    - domain_name: "api"       # (Required when declaring a domain) Same structure as apigw_domains entries above.
+#      version: 1               # (Optional) API Gateway custom domain version. Valid values: 1 or 2. Default: 1
+#  rest_vpc_link_arn: ""        # (Optional) Alternative source for rest_vpc_link_arn. Default: rest_vpc_link_arn
+#  http_vpc_link: {}            # (Optional) Alternative source for http_vpc_link. Default: http_vpc_link
+
 #acm_certificate_arn: ""        # (Optional) Shared ACM certificate ARN for domains without a per-domain certificate. Leave empty to let the module ACM helper create one when needed. Default: ""
 #endpoint_config_types:         # (Optional) Default REST API endpoint types. Valid values: "REGIONAL", "EDGE". Default: ["REGIONAL"]
 #  - "REGIONAL"
 #security_policy: "TLS_1_2"     # (Optional) Default TLS policy applied when a domain override is not set. Valid values: "TLS_1_0", "TLS_1_2". Default: "TLS_1_2"
-#rest_vpc_link_arn: ""          # (Optional) Existing REST API VPC Link ARN used by downstream API Gateway integrations. Default: ""
+#rest_vpc_link_arn: ""          # (Optional) Existing NLB ARN used to create a REST API VPC Link. When vpc_link_enabled is true at scaffold time, terragrunt.hcl injects dependency.vpc_link_nlb.outputs.load_balancer_arn. Default: ""
 #http_vpc_link:                 # (Optional) HTTP API VPC Link definition passed through to the module. Default: {}
 #  name: "http-vpc-link"        # (Optional) Friendly name for the VPC Link. Example: "http-vpc-link"
-#  subnet_ids:                  # (Optional) Subnet IDs for the VPC Link ENIs. Example values shown below.
+#  subnet_ids:                  # (Required when http_vpc_link is set) Subnet IDs for the VPC Link ENIs.
 #    - "subnet-0123456789abcdef0"
 #    - "subnet-0fedcba9876543210"
-#  security_group_ids:          # (Optional) Security groups attached to the VPC Link ENIs.
+#  security_group_ids:          # (Optional) Security groups attached to the VPC Link ENIs. Default: []
 #    - "sg-0123456789abcdef0"
-#  vpc_id: "vpc-0123456789abcdef0" # (Optional) VPC that owns the subnets/security groups.
+#  vpc_id: "vpc-0123456789abcdef0" # (Required when http_vpc_link is set) VPC that owns the subnets/security groups.
 #cloudwatch_role_enabled: true  # (Optional) Create the API Gateway account CloudWatch logging role. Default: true
-#cross_account_acm: false       # (Optional) Enable cross-account ACM/Route53 handling for the helper certificate module. Requires the cross_account special-case object below. Default: false
+#cross_account_acm: false       # (Optional) Enable cross-account ACM/Route53 handling. terragrunt.hcl also derives this from cross_account.enabled when present. Default: false
 #alerts:                        # (Optional) Alert metadata forwarded to the ACM helper module. Default: {}
 #  enabled: false               # (Optional) Enable alert metadata emission. Default: false
 #  priority: 3                  # (Optional) Alert priority/severity. Default: 3
@@ -44,8 +52,12 @@ apigw_domains:
 #    #value: ""                 # (Optional) Explicit API key value. Leave unset to let AWS generate it. Default: null/provider-generated
 
 # Special case: scaffold an ACM dependency and source acm_certificate_arn from it instead of inputs.yaml.
-#acm_enabled: false             # (Optional) When true, terragrunt.hcl renders dependency "acm" and injects dependency.acm.outputs.acm_certificate_arn. Default: false
-#acm_path: "../acm"             # (Optional) Relative Terragrunt path to the ACM module used when acm_enabled = true. Default: "../acm"
+#acm_enabled: false             # (Optional) Scaffold-time setting. When true, terragrunt.hcl renders dependency "acm" and injects dependency.acm.outputs.acm_certificate_arn. Default: false
+#acm_path: "../acm"             # (Optional) Scaffold-time relative Terragrunt path to the ACM module used when acm_enabled = true. Default: "../acm"
+
+# Special case: scaffold a VPC Link NLB dependency and source rest_vpc_link_arn from it instead of inputs.yaml.
+#vpc_link_enabled: false        # (Optional) Scaffold-time setting. When true, terragrunt.hcl renders dependency "vpc_link_nlb" and injects dependency.vpc_link_nlb.outputs.load_balancer_arn. Default: false
+#vpc_link_path: "../vpc-link"   # (Optional) Scaffold-time relative Terragrunt path to the NLB/VPC Link dependency used when vpc_link_enabled = true. Default: "../vpc-link"
 
 # Special case: cross-account provider settings used by terragrunt.hcl when cross_account_acm = true.
 #cross_account:

@@ -30,6 +30,16 @@ variables:
     description: "Path to ACM module dependency"
     type: string
     default: "../acm"
+  - name: vpc_link_enabled
+    order: 4
+    description: "Enable VPC Link module dependency (NLB)"
+    type: bool
+    default: false
+  - name: vpc_link_path
+    order: 5
+    description: "Path to VPC Link module dependency"
+    type: string
+    default: "../vpc-link"
 
 hooks:
   after:
