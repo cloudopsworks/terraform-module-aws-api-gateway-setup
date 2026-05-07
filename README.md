@@ -250,7 +250,7 @@ terraform {
 inputs = {
   is_hub     = false
   org        = local.env_vars.org
-  spoke_def  = local.spoke_vars.spoke_def
+  spoke_def  = local.spoke_vars.spoke
   domain_zone = try(local.local_vars.api_gateway.zone, local.local_vars.domain_zone)
   name_prefix = try(local.local_vars.name_prefix, "")
   apigw_domains = try(local.local_vars.api_gateway.domains, local.local_vars.apigw_domains, [])
@@ -400,13 +400,13 @@ Available targets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.35 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.43.0 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.2.10 |
+| <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.3.6 |
 | <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
 
 ## Resources

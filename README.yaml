@@ -223,7 +223,7 @@ usage: |-
   inputs = {
     is_hub     = false
     org        = local.env_vars.org
-    spoke_def  = local.spoke_vars.spoke_def
+    spoke_def  = local.spoke_vars.spoke
     domain_zone = try(local.local_vars.api_gateway.zone, local.local_vars.domain_zone)
     name_prefix = try(local.local_vars.name_prefix, "")
     apigw_domains = try(local.local_vars.api_gateway.domains, local.local_vars.apigw_domains, [])
