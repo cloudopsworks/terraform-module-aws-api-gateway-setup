@@ -3,8 +3,7 @@
   ** 
   ** This file was automatically generated. 
   ** 1) Make all changes to `README.yaml` 
-  ** 2) Run `make init` (you only need to do this once)
-  ** 3) Run`make readme` to rebuild this file. 
+  ** 2) Run `tronador readme build` to rebuild this file.
   -->
 [![README Header][readme_header_img]][readme_header_link]
 
@@ -54,7 +53,9 @@ way to standardize API Gateway domain configuration:
 - **Per-domain or shared ACM certificate selection**, with an optional ACM helper
   dependency for modules that want Terragrunt to wire in the certificate ARN.
 - **Cross-account certificate/DNS support** through a generated `aws.cross_account`
-  provider alias when certificate validation must happen in another account.
+  provider alias when certificate validation must happen in another account. The
+  module always requires this alias, so the scaffolded `terragrunt.hcl` always
+  generates it in `provider.l.tf`.
 - **Mutual TLS for HTTP APIs** through per-domain trust store configuration.
 - **CloudWatch account logging enablement**, API Gateway client certificates, and
   API key creation for stacks that need these supporting resources.
@@ -108,14 +109,14 @@ domain_zone: "example.com"      # (Required) Base DNS zone appended to each apig
 
 apigw_domains:
   - domain_name: "api"          # (Required) Host label for the custom domain. Example: "api" -> "api.example.com"
-    #version: 1                 # (Optional) API Gateway custom domain version. Valid values: 1 (REST API) or 2 (HTTP API). Default: 1
-    #endpoint_type: "REGIONAL"  # (Optional) Per-domain endpoint type override. Valid values: "REGIONAL", "EDGE". Defaults to the module-level endpoint_config_types or its first entry.
-    #security_policy: "TLS_1_2" # (Optional) Per-domain TLS policy override. Valid values: "TLS_1_0", "TLS_1_2". Defaults to module-level security_policy when empty.
+    #version: 1                 # (Optional) API Gateway custom domain version. Valid values: 1 (REST API) or 2 (HTTP API). Entries with any other value are ignored. Default: 1
+    #endpoint_type: "REGIONAL"  # (Optional) Per-domain endpoint type override. Valid values: "REGIONAL", "EDGE" (version 1); "REGIONAL" (version 2). Defaults to the module-level endpoint_config_types or its first entry.
+    #security_policy: "TLS_1_2" # (Optional) Per-domain TLS policy override. Valid values: "TLS_1_0", "TLS_1_2" (version 1); "TLS_1_2" (version 2). Defaults to module-level security_policy when empty.
     #acm_certificate_arn: ""    # (Optional) Per-domain ACM certificate ARN. Leave empty to use acm_certificate_arn or the ACM dependency special case. Default: ""
-    #ip_address_type: "ipv4"    # (Optional) HTTP API IP address type. Valid values: "ipv4", "dualstack". Default: "ipv4"
+    #ip_address_type: "ipv4"    # (Optional) IP address types allowed to invoke the domain, applied to version 2 only. Valid values: "ipv4", "dualstack". Default: "ipv4"
     #mutual_tls:                # (Optional) Mutual TLS settings for HTTP API domains (version = 2). Default: {}
     #  truststore_uri: "s3://shared-bucket/truststores/api.pem" # (Required when mutual_tls is set) S3 URI containing the trust store bundle.
-    #  truststore_version: "1"  # (Optional) Object version for the trust store file. Default: provider/AWS default
+    #  truststore_version: "1"  # (Optional) S3 object version of the trust store file. Requires bucket versioning. Default: latest object
 
 #api_gateway:                   # (Optional) Grouped input layout supported by terragrunt.hcl for API Gateway-specific values. Top-level keys above remain supported.
 #  zone: "example.com"          # (Optional) Alternative source for domain_zone. Default: domain_zone
@@ -126,46 +127,47 @@ apigw_domains:
 #  http_vpc_link: {}            # (Optional) Alternative source for http_vpc_link. Default: http_vpc_link
 
 #acm_certificate_arn: ""        # (Optional) Shared ACM certificate ARN for domains without a per-domain certificate. Leave empty to let the module ACM helper create one when needed. Default: ""
-#endpoint_config_types:         # (Optional) Default REST API endpoint types. Valid values: "REGIONAL", "EDGE". Default: ["REGIONAL"]
+#endpoint_config_types:         # (Optional) Default endpoint types. Valid values: "REGIONAL", "EDGE". A version 1 domain receives a regional certificate while this list contains "REGIONAL", so remove it to use "EDGE" domains. Default: ["REGIONAL"]
 #  - "REGIONAL"
-#security_policy: "TLS_1_2"     # (Optional) Default TLS policy applied when a domain override is not set. Valid values: "TLS_1_0", "TLS_1_2". Default: "TLS_1_2"
+#security_policy: "TLS_1_2"     # (Optional) Default TLS policy applied when a domain override is not set. Valid values: "TLS_1_0", "TLS_1_2". HTTP API domains accept "TLS_1_2" only. Default: "TLS_1_2"
 #rest_vpc_link_arn: ""          # (Optional) Existing NLB ARN used to create a REST API VPC Link. When vpc_link_enabled is true at scaffold time, terragrunt.hcl injects dependency.vpc_link_nlb.outputs.load_balancer_arn. Default: ""
 #http_vpc_link:                 # (Optional) HTTP API VPC Link definition passed through to the module. Default: {}
-#  name: "http-vpc-link"        # (Optional) Friendly name for the VPC Link. Example: "http-vpc-link"
 #  subnet_ids:                  # (Required when http_vpc_link is set) Subnet IDs for the VPC Link ENIs.
 #    - "subnet-0123456789abcdef0"
 #    - "subnet-0fedcba9876543210"
-#  security_group_ids:          # (Optional) Security groups attached to the VPC Link ENIs. Default: []
+#  security_group_ids:          # (Optional) Additional security groups for the VPC Link. The module always attaches its own. Default: []
 #    - "sg-0123456789abcdef0"
-#  vpc_id: "vpc-0123456789abcdef0" # (Required when http_vpc_link is set) VPC that owns the subnets/security groups.
+#  vpc_id: "vpc-0123456789abcdef0" # (Required when http_vpc_link is set) VPC that owns the subnets. Hosts the security group the module creates.
 #cloudwatch_role_enabled: true  # (Optional) Create the API Gateway account CloudWatch logging role. Default: true
 #cross_account_acm: false       # (Optional) Enable cross-account ACM/Route53 handling. terragrunt.hcl also derives this from cross_account.enabled when present. Default: false
-#alerts:                        # (Optional) Alert metadata forwarded to the ACM helper module. Default: {}
-#  enabled: false               # (Optional) Enable alert metadata emission. Default: false
-#  priority: 3                  # (Optional) Alert priority/severity. Default: 3
-#  sns_topic_arn: ""            # (Optional) SNS topic ARN used by your monitoring workflow. Default: ""
+#alerts:                        # (Optional) Alert settings forwarded to the ACM helper module. Default: {}
+#  enabled: false               # (Optional) Enable alerts. Default: false
+#  priority: 3                  # (Optional) Alert priority. Default: 3
+#  sns_topic_arn: ""            # (Optional) SNS topic ARN that receives alerts. Default: ""
 #client_certificates:           # (Optional) API Gateway client certificates keyed by identifier. Default: {}
 #  partner-a: "Legacy partner certificate"
 #api_keys:                      # (Optional) API keys keyed by identifier. Default: {}
 #  default:                     # (Required when declaring a key) Unique API key entry name.
 #    description: "Default API key for downstream usage plans" # (Required) Human-friendly API key description.
 #    #enabled: true             # (Optional) Set to false to create the key disabled. Default: true
-#    #value: ""                 # (Optional) Explicit API key value. Leave unset to let AWS generate it. Default: null/provider-generated
+#    #value: ""                 # (Optional) Alphanumeric API key value, 20 to 128 characters. Leave unset to let AWS generate it. Default: null
 
 # Special case: scaffold an ACM dependency and source acm_certificate_arn from it instead of inputs.yaml.
+# acm_enabled and acm_path are read by terragrunt scaffold through --var, not from this file.
 #acm_enabled: false             # (Optional) Scaffold-time setting. When true, terragrunt.hcl renders dependency "acm" and injects dependency.acm.outputs.acm_certificate_arn. Default: false
 #acm_path: "../acm"             # (Optional) Scaffold-time relative Terragrunt path to the ACM module used when acm_enabled = true. Default: "../acm"
 
 # Special case: scaffold a VPC Link NLB dependency and source rest_vpc_link_arn from it instead of inputs.yaml.
+# vpc_link_enabled and vpc_link_path are read by terragrunt scaffold through --var, not from this file.
 #vpc_link_enabled: false        # (Optional) Scaffold-time setting. When true, terragrunt.hcl renders dependency "vpc_link_nlb" and injects dependency.vpc_link_nlb.outputs.load_balancer_arn. Default: false
 #vpc_link_path: "../vpc-link"   # (Optional) Scaffold-time relative Terragrunt path to the NLB/VPC Link dependency used when vpc_link_enabled = true. Default: "../vpc-link"
 
-# Special case: cross-account provider settings used by terragrunt.hcl when cross_account_acm = true.
+# Special case: cross-account provider settings. terragrunt.hcl always generates provider.l.tf because the module requires the aws.cross_account alias.
 #cross_account:
-#  enabled: false               # (Optional) Generate and use cross-account provider settings. Default: false
-#  alias: "cross_account"       # (Optional) AWS provider alias emitted into provider.l.tf. Default: "cross_account"
+#  enabled: false               # (Optional) Turn on cross_account_acm for the module. Takes precedence over the top-level cross_account_acm key. Default: false
+#  alias: "cross_account"       # (Optional) AWS provider alias emitted into provider.l.tf. Must stay "cross_account", the alias the module references. Default: "cross_account"
 #  region: "us-east-1"          # (Optional) Region for the generated cross-account provider. Defaults to global-inputs.yaml default.region.
-#  sts_role_arn: "arn:aws:iam::111122223333:role/TerragruntCrossAccountRole" # (Optional) Role assumed for cross-account Route53/ACM operations.
+#  sts_role_arn: "arn:aws:iam::111122223333:role/TerragruntCrossAccountRole" # (Optional) Role assumed for cross-account Route53/ACM operations. Defaults to global-inputs.yaml default.sts_role_arn.
 ```
 
 ### Generated `terragrunt.hcl`
@@ -214,7 +216,7 @@ dependency "acm" {
 
 dependency "vpc_link_nlb" {
   config_path                             = "../vpc-link"
-  mock_outputs_allowed_terraform_commands = ["validate"]
+  mock_outputs_allowed_terraform_commands = ["validate", "destroy"]
   mock_outputs = {
     load_balancer_dns_name = "nlb-12345678901234567.elb.us-east-1.amazonaws.com"
     load_balancer_arn      = "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/nlb-12345678901234567/12345678901234567"
@@ -244,7 +246,7 @@ include "root" {
 }
 
 terraform {
-  source = "git::https://github.com/cloudopsworks/terraform-module-aws-api-gateway-setup.git?ref=v1.4.10"
+  source = "git::https://github.com/cloudopsworks/terraform-module-aws-api-gateway-setup.git?ref=v1.4.14"
 }
 
 inputs = {
@@ -310,6 +312,8 @@ and `rest_vpc_link_arn` falls back to `api_gateway.rest_vpc_link_arn` or the top
 
 ### REST API custom domains with an ACM dependency
 
+Scaffold with `--var acm_enabled=true --var acm_path=../acm`, then set:
+
 ```yaml
 domain_zone: "example.com"
 apigw_domains:
@@ -320,10 +324,11 @@ apigw_domains:
     version: 1
     endpoint_type: "EDGE"
 endpoint_config_types:
-  - "REGIONAL"
-acm_enabled: true
-acm_path: "../acm"
+  - "EDGE"
 ```
+
+`endpoint_config_types` must not contain `REGIONAL` when a version 1 domain uses `EDGE`,
+because the module then assigns the certificate as a regional certificate.
 
 ### HTTP API custom domain with mutual TLS
 
@@ -339,7 +344,7 @@ apigw_domains:
       truststore_version: "3"
 acm_certificate_arn: "arn:aws:acm:us-east-1:111122223333:certificate/12345678-1234-1234-1234-123456789012"
 http_vpc_link:
-  name: "private-http-link"
+  vpc_id: "vpc-0123456789abcdef0"
   subnet_ids:
     - "subnet-0123456789abcdef0"
     - "subnet-0fedcba9876543210"
@@ -349,28 +354,28 @@ http_vpc_link:
 
 ### REST API VPC Link sourced from an NLB dependency
 
+Scaffold with `--var vpc_link_enabled=true --var vpc_link_path=../shared-nlb`, then set:
+
 ```yaml
 domain_zone: "example.com"
 apigw_domains:
   - domain_name: "private"
     version: 1
     endpoint_type: "REGIONAL"
-vpc_link_enabled: true
-vpc_link_path: "../shared-nlb"
 ```
 
 ### Cross-account ACM helper
+
+Leave `acm_enabled` off and `acm_certificate_arn` empty, so the module's ACM helper
+creates the certificate and validates it through the `aws.cross_account` provider:
 
 ```yaml
 domain_zone: "example.com"
 apigw_domains:
   - domain_name: "shared"
     version: 1
-cross_account_acm: true
-acm_enabled: true
 cross_account:
   enabled: true
-  alias: "dns_account"
   region: "us-east-1"
   sts_role_arn: "arn:aws:iam::111122223333:role/TerragruntCrossAccountRole"
 ```
@@ -392,27 +397,27 @@ Available targets:
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.35 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.35 |
+| ---- | ------- |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.43.0 |
 
 ## Modules
 
 | Name | Source | Version |
-|------|--------|---------|
+| ---- | ------ | ------- |
 | <a name="module_certificates"></a> [certificates](#module\_certificates) | git::https://github.com/cloudopsworks/terraform-module-aws-acm-certificate.git | v1.3.6 |
-| <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
+| <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.10 |
 
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [aws_api_gateway_account.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_account) | resource |
 | [aws_api_gateway_api_key.api_keys](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_api_key) | resource |
 | [aws_api_gateway_client_certificate.client](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_client_certificate) | resource |
@@ -433,37 +438,37 @@ Available targets:
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_acm_certificate_arn"></a> [acm\_certificate\_arn](#input\_acm\_certificate\_arn) | ACM Certificate ARN to use for the API Gateway Domain Names | `string` | `""` | no |
-| <a name="input_alerts"></a> [alerts](#input\_alerts) | Enable alerts for API Gateway | <pre>object({<br/>    enabled       = optional(bool, false)<br/>    priority      = optional(number, 3)<br/>    sns_topic_arn = optional(string, "")<br/>  })</pre> | `{}` | no |
-| <a name="input_api_keys"></a> [api\_keys](#input\_api\_keys) | (optional) API Keys map for the api gateway, id => { description = string, enabled = bool, value = string } | <pre>map(object({<br/>    description = string<br/>    enabled     = optional(bool, true)<br/>    value       = optional(string, null)<br/>  }))</pre> | `{}` | no |
-| <a name="input_apigw_domains"></a> [apigw\_domains](#input\_apigw\_domains) | List of API Gateway Domain Names to create | <pre>list(object({<br/>    domain_name         = string<br/>    version             = optional(number, 1)       # Default version is 1 if not specified<br/>    acm_certificate_arn = optional(string, "")      # Optional ACM Certificate ARN<br/>    endpoint_type       = optional(string, "")      # Default endpoint type is null, which will use the default from the variable<br/>    security_policy     = optional(string, "")      # Default security policy is null, which will use the default from the variable<br/>    ip_address_type     = optional(string, "ipv4")  # Default IP address type is ipv4<br/>    mutual_tls          = optional(map(string), {}) # Optional Mutual TLS configuration<br/>  }))</pre> | `[]` | no |
-| <a name="input_client_certificates"></a> [client\_certificates](#input\_client\_certificates) | (optional) Client Certificates map for the api gateway, id => description | `map(string)` | `{}` | no |
-| <a name="input_cloudwatch_role_enabled"></a> [cloudwatch\_role\_enabled](#input\_cloudwatch\_role\_enabled) | Enable CloudWatch Role for API Gateway Account | `bool` | `true` | no |
-| <a name="input_cross_account_acm"></a> [cross\_account\_acm](#input\_cross\_account\_acm) | The cross account to use for the Certificate domain, aws.cross\_account provider must be set to module. | `bool` | `false` | no |
-| <a name="input_domain_zone"></a> [domain\_zone](#input\_domain\_zone) | The domain zone to create the domain names in | `string` | n/a | yes |
-| <a name="input_endpoint_config_types"></a> [endpoint\_config\_types](#input\_endpoint\_config\_types) | Endpoint Configuration Types for the API Gateway Domain Names | `list(string)` | <pre>[<br/>  "REGIONAL"<br/>]</pre> | no |
-| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | n/a | `map(string)` | `{}` | no |
-| <a name="input_http_vpc_link"></a> [http\_vpc\_link](#input\_http\_vpc\_link) | VPC Link for HTTP API Gateway | `any` | `{}` | no |
-| <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Establish this is a HUB or spoke configuration | `bool` | `false` | no |
-| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Prefix for the name of the resources | `string` | `""` | no |
-| <a name="input_org"></a> [org](#input\_org) | n/a | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
-| <a name="input_rest_vpc_link_arn"></a> [rest\_vpc\_link\_arn](#input\_rest\_vpc\_link\_arn) | VPC Link ARN for the REST API (Load Balancer) | `string` | `""` | no |
-| <a name="input_security_policy"></a> [security\_policy](#input\_security\_policy) | Security Policy for the API Gateway Domain Names | `string` | `"TLS_1_2"` | no |
-| <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | n/a | `string` | `"001"` | no |
+| ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_acm_certificate_arn"></a> [acm\_certificate\_arn](#input\_acm\_certificate\_arn) | (Optional) ACM Certificate ARN to use for the API Gateway Domain Names. Default: "" | `string` | `""` | no |
+| <a name="input_alerts"></a> [alerts](#input\_alerts) | (Optional) Enable alerts for API Gateway. Default: {} | <pre>object({<br/>    enabled       = optional(bool, false)<br/>    priority      = optional(number, 3)<br/>    sns_topic_arn = optional(string, "")<br/>  })</pre> | `{}` | no |
+| <a name="input_api_keys"></a> [api\_keys](#input\_api\_keys) | (Optional) API Keys map for the api gateway, id => { description = string, enabled = bool, value = string }. Default: {} | <pre>map(object({<br/>    description = string<br/>    enabled     = optional(bool, true)<br/>    value       = optional(string, null)<br/>  }))</pre> | `{}` | no |
+| <a name="input_apigw_domains"></a> [apigw\_domains](#input\_apigw\_domains) | (Optional) List of API Gateway Domain Names to create. Default: [] | <pre>list(object({<br/>    domain_name         = string<br/>    version             = optional(number, 1)<br/>    acm_certificate_arn = optional(string, "")<br/>    endpoint_type       = optional(string, "")<br/>    security_policy     = optional(string, "")<br/>    ip_address_type     = optional(string, "ipv4")<br/>    mutual_tls          = optional(map(string), {})<br/>  }))</pre> | `[]` | no |
+| <a name="input_client_certificates"></a> [client\_certificates](#input\_client\_certificates) | (Optional) Client Certificates map for the api gateway, id => description. Default: {} | `map(string)` | `{}` | no |
+| <a name="input_cloudwatch_role_enabled"></a> [cloudwatch\_role\_enabled](#input\_cloudwatch\_role\_enabled) | (Optional) Enable CloudWatch Role for API Gateway Account. Default: true | `bool` | `true` | no |
+| <a name="input_cross_account_acm"></a> [cross\_account\_acm](#input\_cross\_account\_acm) | (Optional) The cross account to use for the Certificate domain, aws.cross\_account provider must be set to module. Default: false | `bool` | `false` | no |
+| <a name="input_domain_zone"></a> [domain\_zone](#input\_domain\_zone) | (Required) The domain zone to create the domain names in | `string` | n/a | yes |
+| <a name="input_endpoint_config_types"></a> [endpoint\_config\_types](#input\_endpoint\_config\_types) | (Optional) Endpoint Configuration Types for the API Gateway Domain Names. Default: ["REGIONAL"] | `list(string)` | <pre>[<br/>  "REGIONAL"<br/>]</pre> | no |
+| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
+| <a name="input_http_vpc_link"></a> [http\_vpc\_link](#input\_http\_vpc\_link) | (Optional) VPC Link for HTTP API Gateway. Default: {} | `any` | `{}` | no |
+| <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Is this a hub or spoke configuration? | `bool` | `false` | no |
+| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | (Optional) Prefix for the name of the resources. Default: "" | `string` | `""` | no |
+| <a name="input_org"></a> [org](#input\_org) | Organization details | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
+| <a name="input_rest_vpc_link_arn"></a> [rest\_vpc\_link\_arn](#input\_rest\_vpc\_link\_arn) | (Optional) VPC Link ARN for the REST API (Load Balancer). Default: "" | `string` | `""` | no |
+| <a name="input_security_policy"></a> [security\_policy](#input\_security\_policy) | (Optional) Security Policy for the API Gateway Domain Names. Default: "TLS\_1\_2" | `string` | `"TLS_1_2"` | no |
+| <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | Spoke ID Number, must be a 3 digit number | `string` | `"001"` | no |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
-| <a name="output_apigw_account"></a> [apigw\_account](#output\_apigw\_account) | n/a |
-| <a name="output_apigw_domains"></a> [apigw\_domains](#output\_apigw\_domains) | n/a |
-| <a name="output_apigw_http_vpc_link_id"></a> [apigw\_http\_vpc\_link\_id](#output\_apigw\_http\_vpc\_link\_id) | n/a |
-| <a name="output_apigw_http_vpc_link_name"></a> [apigw\_http\_vpc\_link\_name](#output\_apigw\_http\_vpc\_link\_name) | n/a |
-| <a name="output_apigw_rest_vpc_link_id"></a> [apigw\_rest\_vpc\_link\_id](#output\_apigw\_rest\_vpc\_link\_id) | n/a |
-| <a name="output_apigw_rest_vpc_link_name"></a> [apigw\_rest\_vpc\_link\_name](#output\_apigw\_rest\_vpc\_link\_name) | n/a |
-| <a name="output_apigw_role_arn"></a> [apigw\_role\_arn](#output\_apigw\_role\_arn) | n/a |
-| <a name="output_client_certificates"></a> [client\_certificates](#output\_client\_certificates) | n/a |
+| ---- | ----------- |
+| <a name="output_apigw_account"></a> [apigw\_account](#output\_apigw\_account) | API Gateway account settings with the CloudWatch role ARN and throttle limits, empty when cloudwatch\_role\_enabled is false |
+| <a name="output_apigw_domains"></a> [apigw\_domains](#output\_apigw\_domains) | REST API (version 1) custom domains keyed by fully qualified domain name, with ARN, ID, and CloudFront and regional endpoint details |
+| <a name="output_apigw_http_vpc_link_id"></a> [apigw\_http\_vpc\_link\_id](#output\_apigw\_http\_vpc\_link\_id) | ID of the HTTP API VPC Link, null when http\_vpc\_link is empty |
+| <a name="output_apigw_http_vpc_link_name"></a> [apigw\_http\_vpc\_link\_name](#output\_apigw\_http\_vpc\_link\_name) | Name of the HTTP API VPC Link, null when http\_vpc\_link is empty |
+| <a name="output_apigw_rest_vpc_link_id"></a> [apigw\_rest\_vpc\_link\_id](#output\_apigw\_rest\_vpc\_link\_id) | ID of the REST API VPC Link, null when rest\_vpc\_link\_arn is empty |
+| <a name="output_apigw_rest_vpc_link_name"></a> [apigw\_rest\_vpc\_link\_name](#output\_apigw\_rest\_vpc\_link\_name) | Name of the REST API VPC Link, null when rest\_vpc\_link\_arn is empty |
+| <a name="output_apigw_role_arn"></a> [apigw\_role\_arn](#output\_apigw\_role\_arn) | ARN of the API Gateway CloudWatch logging IAM role, null when cloudwatch\_role\_enabled is false |
+| <a name="output_client_certificates"></a> [client\_certificates](#output\_client\_certificates) | API Gateway client certificates keyed by identifier, with ARN, creation and expiration dates, and PEM-encoded public certificate |
 
 
 
