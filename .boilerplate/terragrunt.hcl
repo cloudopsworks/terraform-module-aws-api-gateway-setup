@@ -37,7 +37,7 @@ dependency "acm" {
 {{ if .vpc_link_enabled }}
 dependency "vpc_link_nlb" {
   config_path                             = "{{ .vpc_link_path }}"
-  mock_outputs_allowed_terraform_commands = ["validate"]
+  mock_outputs_allowed_terraform_commands = ["validate", "destroy"]
   mock_outputs = {
     load_balancer_dns_name = "nlb-12345678901234567.elb.us-east-1.amazonaws.com"
     load_balancer_arn      = "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/nlb-12345678901234567/12345678901234567"
