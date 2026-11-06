@@ -8,6 +8,7 @@
 #
 
 output "apigw_domains" {
+  description = "REST API (version 1) custom domains keyed by fully qualified domain name, with ARN, ID, and CloudFront and regional endpoint details"
   value = {
     for item in aws_api_gateway_domain_name.this : item.domain_name => {
       arn                    = item.arn
@@ -21,6 +22,7 @@ output "apigw_domains" {
 }
 
 output "apigw_account" {
+  description = "API Gateway account settings with the CloudWatch role ARN and throttle limits, empty when cloudwatch_role_enabled is false"
   value = var.cloudwatch_role_enabled ? {
     cloudwatch_role_arn = aws_api_gateway_account.this[0].cloudwatch_role_arn
     burst_limit         = aws_api_gateway_account.this[0].throttle_settings[0].burst_limit
@@ -29,26 +31,32 @@ output "apigw_account" {
 }
 
 output "apigw_role_arn" {
-  value = try(aws_iam_role.cloudwatch[0].arn, null)
+  description = "ARN of the API Gateway CloudWatch logging IAM role, null when cloudwatch_role_enabled is false"
+  value       = try(aws_iam_role.cloudwatch[0].arn, null)
 }
 
 output "apigw_rest_vpc_link_name" {
-  value = var.rest_vpc_link_arn != "" ? aws_api_gateway_vpc_link.vpc_link[0].name : null
+  description = "Name of the REST API VPC Link, null when rest_vpc_link_arn is empty"
+  value       = var.rest_vpc_link_arn != "" ? aws_api_gateway_vpc_link.vpc_link[0].name : null
 }
 
 output "apigw_rest_vpc_link_id" {
-  value = var.rest_vpc_link_arn != "" ? aws_api_gateway_vpc_link.vpc_link[0].id : null
+  description = "ID of the REST API VPC Link, null when rest_vpc_link_arn is empty"
+  value       = var.rest_vpc_link_arn != "" ? aws_api_gateway_vpc_link.vpc_link[0].id : null
 }
 
 output "apigw_http_vpc_link_name" {
-  value = length(var.http_vpc_link) > 0 ? aws_apigatewayv2_vpc_link.vpc_link[0].name : null
+  description = "Name of the HTTP API VPC Link, null when http_vpc_link is empty"
+  value       = length(var.http_vpc_link) > 0 ? aws_apigatewayv2_vpc_link.vpc_link[0].name : null
 }
 
 output "apigw_http_vpc_link_id" {
-  value = length(var.http_vpc_link) > 0 ? aws_apigatewayv2_vpc_link.vpc_link[0].id : null
+  description = "ID of the HTTP API VPC Link, null when http_vpc_link is empty"
+  value       = length(var.http_vpc_link) > 0 ? aws_apigatewayv2_vpc_link.vpc_link[0].id : null
 }
 
 output "client_certificates" {
+  description = "API Gateway client certificates keyed by identifier, with ARN, creation and expiration dates, and PEM-encoded public certificate"
   value = {
     for key, value in var.client_certificates : key => {
       arn             = aws_api_gateway_client_certificate.client[key].arn
